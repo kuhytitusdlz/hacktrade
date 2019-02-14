@@ -99,13 +99,12 @@ describe("hacktrade", function()
     -- ответ суппорта quik
     -- https://forum.quik.ru/messages/forum10/message24910/topic2839/#message24910
 
-    -- FIXME: ordernum -> order_num
     describe("при OnTransReply с успешным статусом и известным id", function()
       before_each(function()
         OnTransReply({
           trans_id = order.trans_id,
           status = 3,
-          ordernum = 2
+          order_num = 2
         })
       end)
 
@@ -169,7 +168,7 @@ describe("hacktrade", function()
         OnTransReply({
           trans_id = order.trans_id + 1,
           status = 3,
-          ordernum = 2
+          order_num = 2
         })
       end)
 
@@ -189,7 +188,7 @@ describe("hacktrade", function()
         OnTransReply({
           trans_id = order.trans_id,
           status = 2,
-          ordernum = 2
+          order_num = 2
         })
       end)
 
@@ -239,7 +238,7 @@ describe("hacktrade", function()
           OnTransReply({
             trans_id = order.trans_id,
             status = 3,
-            ordernum = 2
+            order_num = 2
           })
         end)
 
@@ -291,7 +290,7 @@ describe("hacktrade", function()
           OnTransReply({
             trans_id = order.trans_id,
             status = 3,
-            ordernum = 2
+            order_num = 2
           })
         end)
 
@@ -417,13 +416,13 @@ describe("hacktrade", function()
             bid_count = 2,
             offer_count = 3,
             bid = {
-              {price = "10.0", volume = "1"},
-              {price = "11.0", volume = "2"}
+              {price = "10.0", quantity = "1"},
+              {price = "11.0", quantity = "2"}
             },
             offer = {
-              {price = "12.0", volume = "1"},
-              {price = "13.0", volume = "2"},
-              {price = "14.0", volume = "3"}
+              {price = "12.0", quantity = "1"},
+              {price = "13.0", quantity = "2"},
+              {price = "14.0", quantity = "3"}
             }
           }
         end
@@ -438,16 +437,16 @@ describe("hacktrade", function()
 
       it("по ключу bids убывающая таблица числовых бидов", function()
         assert.are.same({
-          {price = 11.0, volume = 2},
-          {price = 10.0, volume = 1}
+          {price = 11.0, quantity = 2},
+          {price = 10.0, quantity = 1}
         }, feed.bids)
       end)
 
       it("по ключу offers возрастающая таблица числовых оферов", function()
         assert.are.same({
-          {price = 12.0, volume = 1},
-          {price = 13.0, volume = 2},
-          {price = 14.0, volume = 3}
+          {price = 12.0, quantity = 1},
+          {price = 13.0, quantity = 2},
+          {price = 14.0, quantity = 3}
         }, feed.offers)
       end)
 

@@ -76,7 +76,7 @@ MarketData = {}
 function MarketData._pvconverter(elem)
   local nelem = {}
   nelem.price = tonumber(elem.price)
-  nelem.volume = tonumber(elem.volume)
+  nelem.quantity = tonumber(elem.quantity)
   return nelem
 end
 function MarketData:init()
@@ -386,7 +386,7 @@ function OnTransReply(trans_reply)
   local executor = SmartOrder.pool[key]
   if executor ~= nil then
     if trans_reply.status == 3 then
-      executor.order.number = trans_reply.ordernum
+      executor.order.number = trans_reply.order_num
     else
       executor.order = nil
     end
