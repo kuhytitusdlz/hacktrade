@@ -1,29 +1,14 @@
 --[[
-[   HackTrade version 1.4
-[   Nano-framework for HFT-robots development.
-[   -----------------------------------------------------------
-[   © 2014 Denis Kolodin
-[
-[]]--
 
---[[
-[   Releases:
-[     1.3.1 - Bids in quotes 2 reverses. Fix bugs.
-[
-[
-[
-[
-[]]--
+ HackTrade
+ Nano-framework for HFT-robots development.
+ Docs: https://github.com/ffeast/hacktrade
+ -----------------------------------------------------------
+ © Denis Kolodin and https://github.com/ffeast
 
---[[
-[   What to do?!
-[     - save and restoring state (is it needed?)
-[     - stop working during clearing time (global variable, use OnConnected)
-[
-[]]--
+--]]
 
-
---[[ SERVICE FUNCTIONS ]]--
+-- SERVICE FUNCTIONS
 function string.starts(source, starts)
    return string.sub(source, 1, string.len(starts)) == starts
 end
@@ -71,7 +56,7 @@ function round(num, idp)
   return math.floor(num * mult + 0.5) / mult
 end
 
---[[ MARKET DATA SOURCE ]]--
+-- MARKET DATA
 MarketData = {}
 function MarketData._pvconverter(elem)
   local nelem = {}
@@ -86,12 +71,6 @@ function MarketData:__index(key)
   if MarketData[key] ~= nil then
     return MarketData[key]
   end
-  --[[ DEPRECATED: Lazy value support. Don't need it.
-  if string.starts(key, "lazy") then
-    lazy, key = string.match(key, "([^_]+)_([^_]+)")
-    return function() return self[key] end
-  end
-  ]]--
   if key == "bids" then
     local data = getQuoteLevel2(self.market, self.ticker).bid
     data = table.reverse(data) -- Reverse for normal order (not alphabet)!
@@ -122,7 +101,7 @@ end
 setmetatable(MarketData, __object_behaviour)
 
 
---[[ HISTORY DATA SOURCE ]]--
+-- HISTORY DATA SOURCE
 History = {}
 function History:__index(key)
   if History[key] ~= nil then
@@ -175,7 +154,7 @@ end
 setmetatable(Indicator, __object_behaviour)
 
 
---[[ EXECUTION SYSTEM ]]--
+-- EXECUTION SYSTEM
 SmartOrder = {
   -- 666 - Warning! This number uses for cancelling!
   lower = 1000,
@@ -186,19 +165,12 @@ function SmartOrder:__index(key)
   if SmartOrder[key] ~= nil then
     return SmartOrder[key]
   end
-  --[[
-  for k, v in pairs(self) do
-    if key == k then
-      return v
-    end
-  end
-  ]]--
   -- Dynamic fields have to be calculated!
   if key == "remainder" then
-    return (self.planned - self.position)    
+    return (self.planned - self.position)
   end
   if key == "filled" then
-    return (self.planned - self.position) == 0  
+    return (self.planned - self.position) == 0
   end
   return nil
 end
@@ -238,12 +210,11 @@ function SmartOrder:process()
       cancel = true
     end
     local filled = order.filled * order.sign
-    -- log:debug("Difference: " .. self.planned .. " " .. self.position .. " " .. order.quantity)
     if self.planned - self.position - order.quantity ~= 0 then
       cancel = true
     end
     if order.active == false then
-      -- Считаем после установки флага!!!
+      -- Calculate only after .active flag is set!!!
       filled = order.filled * order.sign
       self.position = self.position + filled
       self.order = nil
@@ -306,7 +277,7 @@ end
 setmetatable(SmartOrder, __object_behaviour)
 
 
---[[ LOGGING ]]--
+-- LOGGING
 log = {
     logfile = nil,
     loglevel = 0,
@@ -348,10 +319,9 @@ function log:fatal(t)
   error(t)
 end
 
---[[ MAIN LOOP ]]--
+-- MAIN LOOP
 working = true
 function main()
-  --create_table()
   log:trace("Robot started")
   if Start ~= nil then
     Start()
@@ -380,7 +350,7 @@ function main()
   io.close(log.logfile)
 end
 
---[[ TRANSACTION CALLBACK ]]--
+-- TRANSACTION CALLBACK
 function OnTransReply(trans_reply)
   local key = trans_reply.trans_id
   local executor = SmartOrder.pool[key]
@@ -393,7 +363,7 @@ function OnTransReply(trans_reply)
   end
 end
 
---[[ ORDERS CALLBACK ]]--
+-- ORDERS CALLBACK
 function OnOrder(order)
   local key = order.trans_id
   local executor = SmartOrder.pool[key]
@@ -406,7 +376,7 @@ function OnOrder(order)
   end
 end
 withgui = false
---[[ INIT CALLBACK ]]--
+-- INIT CALLBACK
 function OnInit(path)
   -- Only there it's possible to take path
   log.logfile = io.open(path..'.log', 'w')
@@ -425,8 +395,7 @@ function OnInit(path)
   end
 end
 
-
---[[ END CALLBACK ]]--
+-- END CALLBACK
 function OnStop(stop_flag)
   working = false
   if withgui == true then

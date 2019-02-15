@@ -277,7 +277,6 @@ describe("hacktrade", function()
           assert.is_not_nil(order.order)
         end)
 
-        -- TODO: а почему так?
         it("параметры order не меняются", function()
           assert.are.equal(0, order.position)
           assert.is.falsy(order.filled)
@@ -408,7 +407,6 @@ describe("hacktrade", function()
   describe("для объекта MarketData", function()
     local feed
 
-    -- FIXME: в документации quantity а не volume
     describe("при непустом стакане", function()
       before_each(function()
         _G.getQuoteLevel2 = function(class_code, sec_code)
@@ -455,7 +453,6 @@ describe("hacktrade", function()
       end)
     end)
 
-    -- FIXME: случаи пустого стакана сейчас не обрабатываются
     describe("при пустом стакане", function()
       before_each(function()
         _G.getQuoteLevel2 = function(class_code, sec_code)
