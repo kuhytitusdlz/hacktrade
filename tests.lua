@@ -367,8 +367,9 @@ describe("hacktrade", function()
       indicator = Indicator{tag = "test"}
     end)
 
-    it("по числовому ключу возвращается первый индикатор", function()
-      assert.are.equal(2, indicator[1])
+    it("по числовому ключу либо all возвращается первый индикатор", function()
+      assert.are.same({open = 1, close = 2}, indicator[1])
+      assert.are.same({open = 1, close = 2}, indicator.all[1])
     end)
 
     it("явный запрос по ключу без указания номера линии", function()
@@ -383,8 +384,9 @@ describe("hacktrade", function()
       assert.are.equal(10, indicator.opens_1[1])
     end)
 
-    it("по числовому ключу можно запросить данные с конца", function()
-      assert.are.equal(4, indicator[-1])
+    it("по числовому ключу либо all можно запросить данные с конца", function()
+      assert.are.same({open = 3, close = 4}, indicator[-1])
+      assert.are.same({open = 3, close = 4}, indicator.all[-1])
     end)
 
     it("явный запрос по ключу с конца без указания номера линии", function()
@@ -397,6 +399,7 @@ describe("hacktrade", function()
       assert.are.equal(40, indicator.values_1[-1])
       assert.are.equal(40, indicator.closes_1[-1])
       assert.are.equal(30, indicator.opens_1[-1])
+      assert.are.same({open = 30, close = 40}, indicator.all_1[-1])
     end)
 
     pending("запросы по несуществующим индексам", function()

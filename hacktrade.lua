@@ -8,6 +8,9 @@
 
 --]]
 
+
+inspect = dofile("inspect.lua")
+
 -- SERVICE FUNCTIONS
 function string.starts(source, starts)
    return string.sub(source, 1, string.len(starts)) == starts
@@ -123,7 +126,7 @@ function Indicator:__index(key)
   local extractor = nil
   if type(key) == "number" then
     extractor = key
-    key = "closes_0"
+    key = "all_0"
   end
   local line = key:match("%d+")
   local field = key:match("%a+")
@@ -135,7 +138,7 @@ function Indicator:__index(key)
   if n == 0 then
     log:fatal("Can't load data for chart with tag: "..self.tag)
   end
-  if field ~= nil then
+  if field ~= nil and field ~= "all" then
     field = field:sub(0, -2)
     if field == "value" then
       field = "close"
