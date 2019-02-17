@@ -17,14 +17,14 @@ function string.starts(source, starts)
 end
 
 function string.ends(source, ends)
-   return End=='' or string.sub(source,-string.len(ends)) == ends
+   return End == '' or string.sub(source, -string.len(ends)) == ends
 end
 
 function table.reverse(tab)
   local size = #tab
   local ntab = {}
   for i, v in ipairs(tab) do
-    ntab[size-i+1] = v
+    ntab[size - i + 1] = v
   end
   return ntab
 end
@@ -75,16 +75,19 @@ function MarketData:__index(key)
     return MarketData[key]
   end
   if key == "bids" then
-    local data = getQuoteLevel2(self.market, self.ticker).bid
+    local data = getQuoteLevel2(self.market, self.ticker).bid or {}
     data = table.reverse(data) -- Reverse for normal order (not alphabet)!
     data = table.transform(data, self._pvconverter)
     return data or {}
   elseif key == "offers" then
-    local data = getQuoteLevel2(self.market, self.ticker).offer
+    local data = getQuoteLevel2(self.market, self.ticker).offer or {}
     data = table.transform(data, self._pvconverter)
     return data or {}
   end
   local param = getParamEx(self.market, self.ticker, key)
+  if next(param) == nil then
+    return nil
+  end
   if tonumber(param.param_type) < 3 then
     return tonumber(param.param_value)
   else
@@ -102,7 +105,6 @@ function MarketData:move(price, val)
   return round(result, self.sec_scale)
 end
 setmetatable(MarketData, __object_behaviour)
-
 
 -- HISTORY DATA SOURCE
 History = {}
@@ -155,7 +157,6 @@ function Indicator:__index(key)
   end
 end
 setmetatable(Indicator, __object_behaviour)
-
 
 -- EXECUTION SYSTEM
 SmartOrder = {
@@ -279,7 +280,6 @@ function SmartOrder:process()
 end
 setmetatable(SmartOrder, __object_behaviour)
 
-
 -- LOGGING
 log = {
     logfile = nil,
@@ -378,7 +378,9 @@ function OnOrder(order)
     end
   end
 end
+
 withgui = false
+
 -- INIT CALLBACK
 function OnInit(path)
   -- Only there it's possible to take path
