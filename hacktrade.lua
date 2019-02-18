@@ -8,18 +8,7 @@
 
 --]]
 
-
-inspect = dofile("inspect.lua")
-
 -- SERVICE FUNCTIONS
-function string.starts(source, starts)
-   return string.sub(source, 1, string.len(starts)) == starts
-end
-
-function string.ends(source, ends)
-   return End == '' or string.sub(source, -string.len(ends)) == ends
-end
-
 function table.reverse(tab)
   local size = #tab
   local ntab = {}
