@@ -57,7 +57,7 @@ function MarketData._pvconverter(elem)
   return nelem
 end
 function MarketData:init()
-  log:trace("MarketData created: " .. self.market .. " " .. self.ticker)
+  log:trace("marketData created: " .. self.market .. " " .. self.ticker)
 end
 function MarketData:__index(key)
   if MarketData[key] ~= nil then
@@ -111,7 +111,7 @@ setmetatable(History, __object_behaviour)
 -- You can access by closes_0, values, values_1
 Indicator = {}
 function Indicator:init()
-  log:trace("Indicator created with tag: " .. self.tag)
+  log:trace("indicator created with tag: " .. self.tag)
 end
 function Indicator:__index(key)
   local extractor = nil
@@ -127,7 +127,7 @@ function Indicator:__index(key)
   local candles = getNumCandles(self.tag)
   local data, n, b = getCandlesByIndex(self.tag, tonumber(line), 0, candles)
   if n == 0 then
-    log:fatal("Can't load data for chart with tag: "..self.tag)
+    log:fatal("can't load data for chart with tag: "..self.tag)
   end
   if field ~= nil and field ~= "all" then
     field = field:sub(0, -2)
@@ -195,11 +195,12 @@ function SmartOrder:update(price, planned)
   end
 end
 function SmartOrder:process()
-  log:debug("Processing SmartOrder " .. self.trans_id)
+  log:debug("processing SmartOrder " .. self.trans_id)
   local order = self.order
   if order ~= nil then
     local cancel = false
     if order.price ~= self.price then
+      log:debug("price changed, cancelling order")
       cancel = true
     end
     local filled = order.filled * order.sign
@@ -230,8 +231,10 @@ function SmartOrder:process()
             })
             if result == "" then
               self.order.cancelled = os.time()
+            else
+              log:trace("transaction sending error: " .. tostring(result))
             end
-            log:debug("Kill order")
+            log:debug("kill order")
           end
         end
       end
@@ -241,6 +244,7 @@ function SmartOrder:process()
     if diff ~= 0 then
       if self.order == nil then
         local absdiff = math.abs(diff)
+        log:debug("sending transaction for " .. tostring(diff) .. " items")
         local result = sendTransaction({
           ACCOUNT=self.account,
           CLIENT_CODE=self.client,
@@ -254,6 +258,7 @@ function SmartOrder:process()
           QUANTITY=tostring(absdiff)
         })
         if result == "" then
+          log:debug("transaction ok, creating order")
           self.order = {
             sign = diff / absdiff,
             price = self.price,
@@ -261,8 +266,9 @@ function SmartOrder:process()
             active = true,
             filled = 0,
           }
+        else
+          log:trace("transaction sending error: " .. tostring(result))
         end
-        log:debug("Kill order")
       end
     end
   end
@@ -310,11 +316,14 @@ function log:fatal(t)
   self:error(t)
   error(t)
 end
+function log:setlevel(loglevel)
+  self.loglevel = loglevel;
+end
 
 -- MAIN LOOP
 working = true
 function main()
-  log:trace("Robot started")
+  log:trace("robot started")
   if Start ~= nil then
     Start()
   end
@@ -323,10 +332,10 @@ function main()
     while working do
       local res, errmsg = coroutine.resume(routine)
       if res == false then
-        log:fatal("Broken coroutine: " .. errmsg)
+        log:fatal("broken coroutine: " .. errmsg)
       end
       if coroutine.status(routine) == "dead" then
-        log:trace("Robot routine finished")
+        log:trace("robot routine finished")
         break
       end
       -- Orders processing calls after every coroutine iteration
@@ -335,7 +344,7 @@ function main()
       end
     end
   end
-  log:trace("Robot stopped")
+  log:trace("robot stopped")
   if Stop ~= nil then
     Stop()
   end
@@ -347,6 +356,7 @@ function OnTransReply(trans_reply)
   local key = trans_reply.trans_id
   local executor = SmartOrder.pool[key]
   if executor ~= nil then
+    log:trace("trans status: " .. tostring(trans_reply.status))
     if trans_reply.status == 3 then
       executor.order.number = trans_reply.order_num
     else
@@ -361,6 +371,10 @@ function OnOrder(order)
   local executor = SmartOrder.pool[key]
   -- There isn't order if was executed imidiately!
   if executor ~= nil and executor.order ~= nil then
+    log:trace("OnOrder key "
+              .. tostring(key)
+              .. ", flags: "
+              .. tostring(order.flags))
     executor.order.filled = order.qty - order.balance
     if (order.flags % 2) == 0 then
       executor.order.active = false
@@ -368,14 +382,14 @@ function OnOrder(order)
   end
 end
 
-withgui = false
+WITH_GUI = false
 
 -- INIT CALLBACK
 function OnInit(path)
   -- Only there it's possible to take path
   log.logfile = io.open(path..'.log', 'w')
   -- Table creation
-  if withgui == true then
+  if WITH_GUI == true then
     local table_id = AllocTable()
     if CreateWindow(table_id) == 1 then
       log:trace("SmartOrders table created, id=" .. table_id)
@@ -392,7 +406,7 @@ end
 -- END CALLBACK
 function OnStop(stop_flag)
   working = false
-  if withgui == true then
+  if WITH_GUI == true then
     DestroyTable(SmartOrder.table)
   end
 end
