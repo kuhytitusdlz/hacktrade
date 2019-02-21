@@ -299,6 +299,44 @@ describe("hacktrade", function()
         it("сохраняется номер заявки", function()
           assert.are.same(2, order.order.number)
         end)
+
+        describe("при увеличении числа лотов", function()
+          before_each(function()
+            order:update(nil, order.planned + 1)
+            main()
+          end)
+
+          it("предыдущий ордер снимается", function()
+            assert.stub(_G.sendTransaction).was.called_with({
+                ACCOUNT = "A1",
+                CLIENT_CODE = "C1",
+                CLASSCODE = "M1",
+                SECCODE = "T1",
+                TRANS_ID = "666",
+                ACTION = "KILL_ORDER",
+                ORDER_KEY=tostring(order.order.number)
+            })
+          end)
+        end)
+
+        describe("при уменьшении числа лотов", function()
+          before_each(function()
+            order:update(nil, order.planned - 1)
+            main()
+          end)
+
+          it("предыдущий ордер снимается", function()
+            assert.stub(_G.sendTransaction).was.called_with({
+                ACCOUNT = "A1",
+                CLIENT_CODE = "C1",
+                CLASSCODE = "M1",
+                SECCODE = "T1",
+                TRANS_ID = "666",
+                ACTION = "KILL_ORDER",
+                ORDER_KEY=tostring(order.order.number)
+            })
+          end)
+        end)
       end)
     end)
 
@@ -322,7 +360,7 @@ describe("hacktrade", function()
       end)
     end)
 
-    pending("при обновлении числа лотов", function()
+    pending("при уменьшении числа лотов", function()
     end)
 
     pending("при обновлении цены", function()
