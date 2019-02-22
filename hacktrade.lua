@@ -26,6 +26,43 @@ function table.transform(tab, felem)
   return ntab
 end
 
+-- CONSTANTS
+QUIK = {
+  TYPE = {
+    DOUBLE = 1,
+    LONG = 2,
+    CHAR = 3,
+    ENUM = 4,
+    TIME = 5,
+    DATE = 6
+  },
+  TRANS_REPLY = {
+    SENT = 0,
+    RECEIVED = 1,
+    NOGATE = 2,
+    COMPLETE = 3,
+    INCOMPLETE = 4,
+    REJECTED = 5,
+    BAD_LIMITS = 6,
+    UNSUPPORTED = 10,
+    SIGNATURE_FAILED = 11,
+    NORESPONSE = 12,
+    CROSS = 13
+  },
+  ORDER_BITMAP = {
+    ACTIVE = 0x1,
+    REJECTED = 0x2,
+    BUY = 0x4,
+    LIMITED = 0x8,
+    DIFF_PRICE = 0x10,
+    FILL_OR_KILL = 0x20,
+    MARKET_MAKER = 0x40,
+    ACCEPTED = 0x80,
+    REMAINDER = 0x100,
+    ICEBERG = 0x200
+  }
+}
+
 Trade = coroutine.yield
 
 -- OOP support
@@ -77,7 +114,8 @@ function MarketData:__index(key)
   if next(param) == nil then
     return nil
   end
-  if tonumber(param.param_type) < 3 then
+  if (tonumber(param.param_type) == QUIK.TYPE.DOUBLE
+        or tonumber(param.param_type) == QUIK.TYPE.LONG) then
     return tonumber(param.param_value)
   else
     return param.param_value
@@ -357,7 +395,7 @@ function OnTransReply(trans_reply)
   local executor = SmartOrder.pool[key]
   if executor ~= nil then
     log:trace("trans status: " .. tostring(trans_reply.status))
-    if trans_reply.status == 3 then
+    if trans_reply.status == QUIK.TRANS_REPLY.COMPLETE then
       executor.order.number = trans_reply.order_num
     else
       executor.order = nil
@@ -369,14 +407,15 @@ end
 function OnOrder(order)
   local key = order.trans_id
   local executor = SmartOrder.pool[key]
-  -- There isn't order if was executed imidiately!
+  -- there isn't order if was executed immediately
   if executor ~= nil and executor.order ~= nil then
     log:trace("OnOrder key "
               .. tostring(key)
               .. ", flags: "
               .. tostring(order.flags))
     executor.order.filled = order.qty - order.balance
-    if (order.flags % 2) == 0 then
+    -- other statuses?
+    if order.flags & QUIK.ORDER_BITMAP.ACTIVE == 0 then
       executor.order.active = false
     end
   end
