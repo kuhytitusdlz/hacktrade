@@ -47,19 +47,13 @@ describe("hacktrade", function()
     end)
   end)
 
-  -- TODO: проверка position & отмена
   describe("при создании SmartOrder", function()
-
     local order
     local trade = function()
       Trade()
     end
 
     before_each(function()
-      _G.sendTransaction = mock(function()
-        return ""
-      end)
-
       order = SmartOrder{
           market = "M1",
           ticker = "T1",
@@ -68,114 +62,78 @@ describe("hacktrade", function()
         }
       order:update(10.0, 2)
       _G.Robot = trade
-      main()
     end)
 
-    it("в терминал уходит заявка", function()
-      assert.stub(_G.sendTransaction).was.called_with({
-          ACCOUNT = "A1",
-          CLIENT_CODE = "C1",
-          CLASSCODE = "M1",
-          SECCODE = "T1",
-          TYPE = "L",
-          TRANS_ID = tostring(order.trans_id),
-          ACTION = "NEW_ORDER",
-          OPERATION = "B",
-          PRICE = tostring(10.0),
-          QUANTITY = tostring(2)
-      })
-    end)
-    it("обновлено внутреннее состояние", function()
-      assert.are.same({
-        sign = 1.0,
-        price = 10.0,
-        quantity = 2,
-        active = true,
-        filled = 0
-      }, order.order)
-      assert.are.equal(order.planned, 2)
-      assert.are.equal(order.remainder, 2)
-      assert.is.falsy(order.filled)
-    end)
-
-    -- вызовы OnOrder / OnTransReply могут происходить в любом порядке,
-    -- ответ суппорта quik
-    -- https://forum.quik.ru/messages/forum10/message24910/topic2839/#message24910
-
-    describe("при OnTransReply с успешным статусом и известным id", function()
+    describe("и одновременном срабатывании OnTransReply", function()
       before_each(function()
-        OnTransReply({
-          trans_id = order.trans_id,
-          status = 3,
-          order_num = 2
-        })
+        _G.sendTransaction = function()
+          OnTransReply({
+            trans_id = order.trans_id,
+            status = 3,
+            order_num = 2
+          })
+        end
+        main()
       end)
 
-      it("сохраняетя номер заявки", function()
+      it("сохраняется номер заявки", function()
         assert.are.same(2, order.order.number)
       end)
+    end)
 
-      describe("при последующем успешном OnOrder", function()
-        before_each(function()
+    describe("и одновременном срабатывании OnTransReply и OnOrder", function()
+      before_each(function()
+        _G.sendTransaction = function()
+          OnTransReply({
+            trans_id = order.trans_id,
+            status = 3,
+            order_num = 2
+          })
           OnOrder({
             trans_id = order.trans_id,
             qty = 2,
             balance = 0,
             flags = 0x2
           })
-        end)
-
-        it("order.order деактивируется", function()
-          assert.are.same({
-            sign = 1.0,
-            number = 2,
-            price = 10.0,
-            quantity = 2,
-            active = false,
-            filled = 2
-          }, order.order)
-        end)
+        end
+        main()
       end)
 
-      describe("при двух подряд идущих частичных OnOrder", function()
-        before_each(function()
-          OnOrder({
-            trans_id = order.trans_id,
-            qty = 2,
-            balance = 1,
-            flags = 0x2
-          })
-          OnOrder({
-            trans_id = order.trans_id,
-            qty = 2,
-            balance = 0,
-            flags = 0x2
-          })
-        end)
-
-        it("order снимается", function()
+      it("order.order деактивируется", function()
           assert.are.same({
             sign = 1.0,
-            price = 10.0,
             number = 2,
+            price = 10.0,
             quantity = 2,
             active = false,
             filled = 2
           }, order.order)
-        end)
       end)
     end)
 
-    describe("при OnTransReply в неизвестным id", function()
+    describe("и отсутствии гонок", function()
       before_each(function()
-        OnTransReply({
-          trans_id = order.trans_id + 1,
-          status = 3,
-          order_num = 2
-        })
+        _G.sendTransaction = mock(function()
+          return ""
+        end)
+        main()
       end)
 
-      it("order не меняется", function()
+      it("в терминал уходит заявка", function()
+        assert.stub(_G.sendTransaction).was.called_with({
+            ACCOUNT = "A1",
+            CLIENT_CODE = "C1",
+            CLASSCODE = "M1",
+            SECCODE = "T1",
+            TYPE = "L",
+            TRANS_ID = tostring(order.trans_id),
+            ACTION = "NEW_ORDER",
+            OPERATION = "B",
+            PRICE = tostring(10.0),
+            QUANTITY = tostring(2)
+        })
+      end)
+      it("обновлено внутреннее состояние", function()
         assert.are.same({
           sign = 1.0,
           price = 10.0,
@@ -183,117 +141,32 @@ describe("hacktrade", function()
           active = true,
           filled = 0
         }, order.order)
-      end)
-    end)
-
-    describe("при OnTransReply со статусом отличным от 3", function()
-      before_each(function()
-        OnTransReply({
-          trans_id = order.trans_id,
-          status = 2,
-          order_num = 2
-        })
+        assert.are.equal(order.planned, 2)
+        assert.are.equal(order.remainder, 2)
+        assert.is.falsy(order.filled)
       end)
 
-      it("order удаляется", function()
-        assert.is_nil(order.order)
-      end)
-    end)
+      -- вызовы OnOrder / OnTransReply могут происходить в любом порядке,
+      -- ответ суппорта quik
+      -- https://forum.quik.ru/messages/forum10/message24910/topic2839/#message24910
 
-    describe("при OnOrder с полным выполнением", function()
-      before_each(function()
-        OnOrder({
-          trans_id = order.trans_id,
-          qty = 2,
-          balance = 0,
-          flags = 0x2
-        })
-      end)
-
-      it("order снимается", function()
-        assert.are.same({
-          sign = 1.0,
-          price = 10.0,
-          quantity = 2,
-          active = false,
-          filled = 2
-        }, order.order)
-      end)
-
-      describe("при последующем пересчете", function()
-        before_each(function()
-          order:process()
-        end)
-
-        it("order.order удаляется", function()
-          assert.is_nil(order.order)
-        end)
-
-        it("параметры order обновляются", function()
-          assert.are.equal(order.position, 2)
-          assert.is.truthy(order.filled)
-          assert.are.equal(order.remainder, 0)
-        end)
-      end)
-
-      describe("при последующем успешном OnTransReply", function()
+      describe("при OnTransReply с успешным статусом и известным id", function()
+        local cancel_tran
         before_each(function()
           OnTransReply({
             trans_id = order.trans_id,
             status = 3,
             order_num = 2
           })
-        end)
-
-        it("сохраняется номер заявки", function()
-          assert.are.same(2, order.order.number)
-        end)
-      end)
-    end)
-
-    describe("при OnOrder с частичным выполнением", function()
-      before_each(function()
-        OnOrder({
-          trans_id = order.trans_id,
-          qty = 2,
-          balance = 1,
-          flags = 0x1
-        })
-      end)
-
-      it("остаток в order уменьшается и order не снимается", function()
-        assert.are.same({
-          sign = 1.0,
-          price = 10.0,
-          quantity = 2,
-          active = true,
-          filled = 1
-        }, order.order)
-      end)
-
-      describe("при последующем пересчете", function()
-        before_each(function()
-          order:process()
-        end)
-
-        it("order.order остается", function()
-          assert.is_not_nil(order.order)
-        end)
-
-        it("параметры order не меняются", function()
-          assert.are.equal(0, order.position)
-          assert.is.falsy(order.filled)
-          assert.are.equal(2, order.remainder)
-        end)
-      end)
-
-      describe("при последующем успешном OnTransReply", function()
-        before_each(function()
-          OnTransReply({
-            trans_id = order.trans_id,
-            status = 3,
-            order_num = 2
-          })
+          cancel_tran = {
+            ACCOUNT = "A1",
+            CLIENT_CODE = "C1",
+            CLASSCODE = "M1",
+            SECCODE = "T1",
+            TRANS_ID = "666",
+            ACTION = "KILL_ORDER",
+            ORDER_KEY=tostring(order.order.number)
+          }
         end)
 
         it("сохраняется номер заявки", function()
@@ -306,16 +179,21 @@ describe("hacktrade", function()
             main()
           end)
 
-          it("предыдущий ордер снимается", function()
-            assert.stub(_G.sendTransaction).was.called_with({
-                ACCOUNT = "A1",
-                CLIENT_CODE = "C1",
-                CLASSCODE = "M1",
-                SECCODE = "T1",
-                TRANS_ID = "666",
-                ACTION = "KILL_ORDER",
-                ORDER_KEY=tostring(order.order.number)
-            })
+          it("выставляется заявка на отмену", function()
+            assert.stub(_G.sendTransaction).was.called_with(cancel_tran)
+          end)
+
+          describe("при выполнении заявки на отмену", function()
+            before_each(function()
+              OnTransReply({
+                trans_id = order.trans_id,
+                status = 4
+              })
+            end)
+
+            it("order сносится", function()
+              assert.is_nil(order.order)
+            end)
           end)
         end)
 
@@ -325,45 +203,228 @@ describe("hacktrade", function()
             main()
           end)
 
-          it("предыдущий ордер снимается", function()
-            assert.stub(_G.sendTransaction).was.called_with({
-                ACCOUNT = "A1",
-                CLIENT_CODE = "C1",
-                CLASSCODE = "M1",
-                SECCODE = "T1",
-                TRANS_ID = "666",
-                ACTION = "KILL_ORDER",
-                ORDER_KEY=tostring(order.order.number)
+          it("выставляется заявка на отмену", function()
+            assert.stub(_G.sendTransaction).was.called_with(cancel_tran)
+          end)
+        end)
+
+        describe("при изменении цены", function()
+          before_each(function()
+            order:update(order.price + 1, nil)
+            main()
+          end)
+
+          it("выставляется заявка на отмену", function()
+            assert.stub(_G.sendTransaction).was.called_with(cancel_tran)
+          end)
+        end)
+
+        describe("при последующем успешном OnOrder", function()
+          before_each(function()
+            OnOrder({
+              trans_id = order.trans_id,
+              qty = 2,
+              balance = 0,
+              flags = 0x2
             })
+          end)
+
+          it("order.order деактивируется", function()
+            assert.are.same({
+              sign = 1.0,
+              number = 2,
+              price = 10.0,
+              quantity = 2,
+              active = false,
+              filled = 2
+            }, order.order)
+          end)
+        end)
+
+        describe("при двух подряд идущих частичных OnOrder", function()
+          before_each(function()
+            OnOrder({
+              trans_id = order.trans_id,
+              qty = 2,
+              balance = 1,
+              flags = 0x2
+            })
+            OnOrder({
+              trans_id = order.trans_id,
+              qty = 2,
+              balance = 0,
+              flags = 0x2
+            })
+          end)
+
+          it("order снимается", function()
+            assert.are.same({
+              sign = 1.0,
+              price = 10.0,
+              number = 2,
+              quantity = 2,
+              active = false,
+              filled = 2
+            }, order.order)
           end)
         end)
       end)
-    end)
 
-    describe("при OnOrder с неизвестным id", function()
-      before_each(function()
-        OnOrder({
-          trans_id = order.trans_id + 1,
-          qty = 2,
-          balance = 1,
-          flags = 0x1
-        })
+      describe("при OnTransReply в неизвестным id", function()
+        before_each(function()
+          OnTransReply({
+            trans_id = order.trans_id + 1,
+            status = 3,
+            order_num = 2
+          })
+        end)
+
+        it("order не меняется", function()
+          assert.are.same({
+            sign = 1.0,
+            price = 10.0,
+            quantity = 2,
+            active = true,
+            filled = 0
+          }, order.order)
+        end)
       end)
-      it("имеющийся order не меняется", function()
-        assert.are.same({
-          sign = 1.0,
-          price = 10.0,
-          quantity = 2,
-          active = true,
-          filled = 0
-        }, order.order)
+
+      describe("при OnTransReply со статусом отличным от 3", function()
+        before_each(function()
+          OnTransReply({
+            trans_id = order.trans_id,
+            status = 2,
+            order_num = 2
+          })
+        end)
+
+        it("order удаляется", function()
+          assert.is_nil(order.order)
+        end)
       end)
-    end)
 
-    pending("при уменьшении числа лотов", function()
-    end)
+      describe("при OnOrder с полным выполнением", function()
+        before_each(function()
+          OnOrder({
+            trans_id = order.trans_id,
+            qty = 2,
+            balance = 0,
+            flags = 0x2
+          })
+        end)
 
-    pending("при обновлении цены", function()
+        it("order снимается", function()
+          assert.are.same({
+            sign = 1.0,
+            price = 10.0,
+            quantity = 2,
+            active = false,
+            filled = 2
+          }, order.order)
+        end)
+
+        describe("при последующем пересчете", function()
+          before_each(function()
+            order:process()
+          end)
+
+          it("order.order удаляется", function()
+            assert.is_nil(order.order)
+          end)
+
+          it("параметры order обновляются", function()
+            assert.are.equal(order.position, 2)
+            assert.is.truthy(order.filled)
+            assert.are.equal(order.remainder, 0)
+          end)
+        end)
+
+        describe("при последующем успешном OnTransReply", function()
+          before_each(function()
+            OnTransReply({
+              trans_id = order.trans_id,
+              status = 3,
+              order_num = 2
+            })
+          end)
+
+          it("сохраняется номер заявки", function()
+            assert.are.same(2, order.order.number)
+          end)
+        end)
+      end)
+
+      describe("при OnOrder с частичным выполнением", function()
+        before_each(function()
+          OnOrder({
+            trans_id = order.trans_id,
+            qty = 2,
+            balance = 1,
+            flags = 0x1
+          })
+        end)
+
+        it("остаток в order уменьшается и order не снимается", function()
+          assert.are.same({
+            sign = 1.0,
+            price = 10.0,
+            quantity = 2,
+            active = true,
+            filled = 1
+          }, order.order)
+        end)
+
+        describe("при последующем пересчете", function()
+          before_each(function()
+            order:process()
+          end)
+
+          it("order.order остается", function()
+            assert.is_not_nil(order.order)
+          end)
+
+          it("параметры order не меняются", function()
+            assert.are.equal(0, order.position)
+            assert.is.falsy(order.filled)
+            assert.are.equal(2, order.remainder)
+          end)
+        end)
+
+        describe("при последующем успешном OnTransReply", function()
+          before_each(function()
+            OnTransReply({
+              trans_id = order.trans_id,
+              status = 3,
+              order_num = 2
+            })
+          end)
+
+          it("сохраняется номер заявки", function()
+            assert.are.same(2, order.order.number)
+          end)
+        end)
+      end)
+
+      describe("при OnOrder с неизвестным id", function()
+        before_each(function()
+          OnOrder({
+            trans_id = order.trans_id + 1,
+            qty = 2,
+            balance = 1,
+            flags = 0x1
+          })
+        end)
+        it("имеющийся order не меняется", function()
+          assert.are.same({
+            sign = 1.0,
+            price = 10.0,
+            quantity = 2,
+            active = true,
+            filled = 0
+          }, order.order)
+        end)
+      end)
     end)
   end)
 
