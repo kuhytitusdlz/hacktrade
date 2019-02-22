@@ -245,6 +245,13 @@ function SmartOrder:process()
       if self.order == nil then
         local absdiff = math.abs(diff)
         log:debug("sending transaction for " .. tostring(diff) .. " items")
+        self.order = {
+          sign = diff / absdiff,
+          price = self.price,
+          quantity = diff,
+          active = true,
+          filled = 0,
+        }
         local result = sendTransaction({
           ACCOUNT=self.account,
           CLIENT_CODE=self.client,
@@ -257,17 +264,10 @@ function SmartOrder:process()
           PRICE=tostring(self.price),
           QUANTITY=tostring(absdiff)
         })
-        if result == "" then
-          log:debug("transaction ok, creating order")
-          self.order = {
-            sign = diff / absdiff,
-            price = self.price,
-            quantity = diff,
-            active = true,
-            filled = 0,
-          }
+        if result ~= "" then
+          log:warning("transaction sending error: " .. tostring(result))
         else
-          log:trace("transaction sending error: " .. tostring(result))
+          log:trace("transaction ok")
         end
       end
     end
