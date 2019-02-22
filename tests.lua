@@ -474,10 +474,16 @@ describe("hacktrade", function()
       assert.are.same({open = 1, close = 2}, indicator.all[1])
     end)
 
-    it("явный запрос по ключу без указания номера линии", function()
+    it("явный запрос по первому ключу без указания номера линии", function()
       assert.are.equal(2, indicator.values[1])
       assert.are.equal(2, indicator.closes[1])
       assert.are.equal(1, indicator.opens[1])
+    end)
+
+    it("явный запрос по последнему ключу без указания номера линии", function()
+      assert.are.equal(4, indicator.values[3])
+      assert.are.equal(4, indicator.closes[3])
+      assert.are.equal(3, indicator.opens[3])
     end)
 
     it("явный запрос по ключу с указанием номера линии", function()
@@ -504,8 +510,9 @@ describe("hacktrade", function()
       assert.are.same({open = 30, close = 40}, indicator.all_1[-1])
     end)
 
-    pending("запросы по несуществующим индексам", function()
-      -- FIXME: при запросе по 0 или неверному ключу => C stack overflow
+    it("запросы по несуществующим индексам", function()
+      assert.is_nil(indicator[-100])
+      assert.is_nil(indicator[100])
     end)
   end)
 

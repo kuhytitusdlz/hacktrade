@@ -136,6 +136,9 @@ setmetatable(MarketData, __object_behaviour)
 -- HISTORY DATA SOURCE
 History = {}
 function History:__index(key)
+  if math.abs(key) > #self then
+    return nil
+  end
   if History[key] ~= nil then
     return History[key]
   end
