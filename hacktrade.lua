@@ -259,13 +259,13 @@ function SmartOrder:process()
             end
           else
             local result = sendTransaction({
-              ACCOUNT=self.account,
-              CLIENT_CODE=self.client,
-              CLASSCODE=self.market,
-              SECCODE=self.ticker,
-              TRANS_ID="666",
-              ACTION="KILL_ORDER",
-              ORDER_KEY=tostring(self.order.number)
+              ACCOUNT = self.account,
+              CLIENT_CODE = self.client,
+              CLASSCODE = self.market,
+              SECCODE = self.ticker,
+              TRANS_ID = "666",
+              ACTION = "KILL_ORDER",
+              ORDER_KEY = tostring(self.order.number)
             })
             if result == "" then
               self.order.cancelled = os.time()
@@ -291,16 +291,16 @@ function SmartOrder:process()
           filled = 0,
         }
         local result = sendTransaction({
-          ACCOUNT=self.account,
-          CLIENT_CODE=self.client,
-          CLASSCODE=self.market,
-          SECCODE=self.ticker,
-          TYPE="L",
-          TRANS_ID=tostring(self.trans_id),
-          ACTION="NEW_ORDER",
-          OPERATION=(diff > 0 and "B") or "S",
-          PRICE=tostring(self.price),
-          QUANTITY=tostring(absdiff)
+          ACCOUNT = self.account,
+          CLIENT_CODE = self.client,
+          CLASSCODE = self.market,
+          SECCODE = self.ticker,
+          TYPE = "L",
+          TRANS_ID = tostring(self.trans_id),
+          ACTION = "NEW_ORDER",
+          OPERATION = (diff > 0 and "B") or "S",
+          PRICE = tostring(self.price),
+          QUANTITY = tostring(absdiff)
         })
         if result ~= "" then
           log:warning("transaction sending error: " .. tostring(result))
@@ -359,7 +359,8 @@ function log:setlevel(loglevel)
 end
 
 -- MAIN LOOP
-working = true
+WORKING_FLAG = true
+
 function main()
   log:trace("robot started")
   if Start ~= nil then
@@ -367,7 +368,7 @@ function main()
   end
   if Robot ~= nil then
     local routine = coroutine.create(Robot)
-    while working do
+    while WORKING_FLAG do
       local res, errmsg = coroutine.resume(routine)
       if res == false then
         log:fatal("broken coroutine: " .. errmsg)
@@ -376,7 +377,7 @@ function main()
         log:trace("robot routine finished")
         break
       end
-      -- Orders processing calls after every coroutine iteration
+      -- orders processing calls after every coroutine iteration
       for trans_id, smartorder in pairs(SmartOrder.pool) do
         smartorder:process()
       end
@@ -444,7 +445,7 @@ end
 
 -- END CALLBACK
 function OnStop(stop_flag)
-  working = false
+  WORKING_FLAG = false
   if WITH_GUI == true then
     DestroyTable(SmartOrder.table)
   end
