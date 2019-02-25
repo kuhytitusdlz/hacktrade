@@ -26,6 +26,20 @@ function table.transform(tab, felem)
   return ntab
 end
 
+function bitand(a, b)
+    local result = 0
+    local bitval = 1
+    while a > 0 and b > 0 do
+      if a % 2 == 1 and b % 2 == 1 then -- test the rightmost bits
+          result = result + bitval      -- set the current bit
+      end
+      bitval = bitval * 2 -- shift left
+      a = math.floor(a / 2) -- shift right
+      b = math.floor(b / 2)
+    end
+    return result
+end
+
 -- CONSTANTS
 QUIK = {
   TYPE = {
@@ -419,7 +433,7 @@ function OnOrder(order)
               .. tostring(order.flags))
     executor.order.filled = order.qty - order.balance
     -- other statuses?
-    if order.flags & QUIK.ORDER_BITMAP.ACTIVE == 0 then
+    if bitand(order.flags, QUIK.ORDER_BITMAP.ACTIVE) == 0 then
       executor.order.active = false
     end
   end
