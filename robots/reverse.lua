@@ -21,7 +21,7 @@ function Robot()
     size = 1
 
     while true do
-        if feed.last > ind[-1].close then
+        if feed.last > ind.closes[-1] then
           order:update(feed.last, size)
         else
           order:update(feed.last, -size)
