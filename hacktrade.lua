@@ -1,5 +1,4 @@
 --[[
-<<<<<<< HEAD
 [   HackTrade version 1.4
 [   Nano-framework for HFT-robots development.
 [   -----------------------------------------------------------
@@ -22,23 +21,22 @@
 [     - stop working during clearing time (global variable, use OnConnected)
 [
 []]--
-=======
->>>>>>> ffeast/develop
 
- HackTrade
- Nano-framework for HFT-robots development.
- Docs: https://github.com/ffeast/hacktrade
- -----------------------------------------------------------
- � Denis Kolodin and https://github.com/ffeast
 
---]]
+--[[ SERVICE FUNCTIONS ]]--
+function string.starts(source, starts)
+   return string.sub(source, 1, string.len(starts)) == starts
+end
 
--- SERVICE FUNCTIONS
+function string.ends(source, ends)
+   return End=='' or string.sub(source,-string.len(ends)) == ends
+end
+
 function table.reverse(tab)
   local size = #tab
   local ntab = {}
   for i, v in ipairs(tab) do
-    ntab[size - i + 1] = v
+    ntab[size-i+1] = v
   end
   return ntab
 end
@@ -50,57 +48,6 @@ function table.transform(tab, felem)
   end
   return ntab
 end
-
-function bitand(a, b)
-    local result = 0
-    local bitval = 1
-    while a > 0 and b > 0 do
-      if a % 2 == 1 and b % 2 == 1 then -- test the rightmost bits
-          result = result + bitval      -- set the current bit
-      end
-      bitval = bitval * 2 -- shift left
-      a = math.floor(a / 2) -- shift right
-      b = math.floor(b / 2)
-    end
-    return result
-end
-
--- CONSTANTS
-QUIK = {
-  TYPE = {
-    DOUBLE = 1,
-    LONG = 2,
-    CHAR = 3,
-    ENUM = 4,
-    TIME = 5,
-    DATE = 6
-  },
-  TRANS_REPLY = {
-    SENT = 0,
-    RECEIVED = 1,
-    NOGATE = 2,
-    COMPLETE = 3,
-    INCOMPLETE = 4,
-    REJECTED = 5,
-    BAD_LIMITS = 6,
-    UNSUPPORTED = 10,
-    SIGNATURE_FAILED = 11,
-    NORESPONSE = 12,
-    CROSS = 13
-  },
-  ORDER_BITMAP = {
-    ACTIVE = 0x1,
-    REJECTED = 0x2,
-    BUY = 0x4,
-    LIMITED = 0x8,
-    DIFF_PRICE = 0x10,
-    FILL_OR_KILL = 0x20,
-    MARKET_MAKER = 0x40,
-    ACCEPTED = 0x80,
-    REMAINDER = 0x100,
-    ICEBERG = 0x200
-  }
-}
 
 Trade = coroutine.yield
 
@@ -124,37 +71,39 @@ function round(num, idp)
   return math.floor(num * mult + 0.5) / mult
 end
 
--- MARKET DATA
+--[[ MARKET DATA SOURCE ]]--
 MarketData = {}
 function MarketData._pvconverter(elem)
   local nelem = {}
   nelem.price = tonumber(elem.price)
-  nelem.quantity = tonumber(elem.quantity)
+  nelem.volume = tonumber(elem.volume)
   return nelem
 end
 function MarketData:init()
-  log:trace("marketData created: " .. self.market .. " " .. self.ticker)
+  log:trace("MarketData created: " .. self.market .. " " .. self.ticker)
 end
 function MarketData:__index(key)
   if MarketData[key] ~= nil then
     return MarketData[key]
   end
+  --[[ DEPRECATED: Lazy value support. Don't need it.
+  if string.starts(key, "lazy") then
+    lazy, key = string.match(key, "([^_]+)_([^_]+)")
+    return function() return self[key] end
+  end
+  ]]--
   if key == "bids" then
-    local data = getQuoteLevel2(self.market, self.ticker).bid or {}
+    local data = getQuoteLevel2(self.market, self.ticker).bid
     data = table.reverse(data) -- Reverse for normal order (not alphabet)!
     data = table.transform(data, self._pvconverter)
     return data or {}
   elseif key == "offers" then
-    local data = getQuoteLevel2(self.market, self.ticker).offer or {}
+    local data = getQuoteLevel2(self.market, self.ticker).offer
     data = table.transform(data, self._pvconverter)
     return data or {}
   end
   local param = getParamEx(self.market, self.ticker, key)
-  if next(param) == nil then
-    return nil
-  end
-  if (tonumber(param.param_type) == QUIK.TYPE.DOUBLE
-        or tonumber(param.param_type) == QUIK.TYPE.LONG) then
+  if tonumber(param.param_type) < 3 then
     return tonumber(param.param_value)
   else
     return param.param_value
@@ -172,12 +121,10 @@ function MarketData:move(price, val)
 end
 setmetatable(MarketData, __object_behaviour)
 
--- HISTORY DATA SOURCE
+
+--[[ HISTORY DATA SOURCE ]]--
 History = {}
 function History:__index(key)
-  if math.abs(key) > #self then
-    return nil
-  end
   if History[key] ~= nil then
     return History[key]
   end
@@ -191,13 +138,13 @@ setmetatable(History, __object_behaviour)
 -- You can access by closes_0, values, values_1
 Indicator = {}
 function Indicator:init()
-  log:trace("indicator created with tag: " .. self.tag)
+  log:trace("Indicator created with tag: " .. self.tag)
 end
 function Indicator:__index(key)
   local extractor = nil
   if type(key) == "number" then
     extractor = key
-    key = "all_0"
+    key = "closes_0"
   end
   local line = key:match("%d+")
   local field = key:match("%a+")
@@ -207,9 +154,9 @@ function Indicator:__index(key)
   local candles = getNumCandles(self.tag)
   local data, n, b = getCandlesByIndex(self.tag, tonumber(line), 0, candles)
   if n == 0 then
-    log:fatal("can't load data for chart with tag: "..self.tag)
+    log:fatal("Can't load data for chart with tag: "..self.tag)
   end
-  if field ~= nil and field ~= "all" then
+  if field ~= nil then
     field = field:sub(0, -2)
     if field == "value" then
       field = "close"
@@ -227,7 +174,8 @@ function Indicator:__index(key)
 end
 setmetatable(Indicator, __object_behaviour)
 
--- EXECUTION SYSTEM
+
+--[[ EXECUTION SYSTEM ]]--
 SmartOrder = {
   -- 666 - Warning! This number uses for cancelling!
   lower = 1000,
@@ -238,12 +186,19 @@ function SmartOrder:__index(key)
   if SmartOrder[key] ~= nil then
     return SmartOrder[key]
   end
+  --[[
+  for k, v in pairs(self) do
+    if key == k then
+      return v
+    end
+  end
+  ]]--
   -- Dynamic fields have to be calculated!
   if key == "remainder" then
-    return (self.planned - self.position)
+    return (self.planned - self.position)    
   end
   if key == "filled" then
-    return (self.planned - self.position) == 0
+    return (self.planned - self.position) == 0  
   end
   return nil
 end
@@ -275,35 +230,23 @@ function SmartOrder:update(price, planned)
   end
 end
 function SmartOrder:process()
-<<<<<<< HEAD
   log:debug("----------------------------------------------------------------------------------------------------")
   log:debug("Processing SmartOrder >> " .. self.trans_id)
-=======
-  log:debug("processing SmartOrder " .. self.trans_id)
->>>>>>> ffeast/develop
   local order = self.order
   if order ~= nil then
     log:debug("Parameters >> ".."price="..tostring(self.price).." planned="..self.planned.." position="..self.position.." order_qty="..order.quantity)
     local cancel = false
     if order.price ~= self.price then
-      log:debug("price changed, cancelling order")
       cancel = true
       log:debug("NEW PRICE="..self.price)
     end
     local filled = order.filled * order.sign
-<<<<<<< HEAD
     --log:debug("Difference >> planned=" .. self.planned .. " position=" .. self.position .. " order_qty=" .. order.quantity)
-=======
->>>>>>> ffeast/develop
     if self.planned - self.position - order.quantity ~= 0 then
       cancel = true
     end
     if order.active == false then
-<<<<<<< HEAD
       -- Считаем после установки флага!!!
-=======
-      -- Calculate only after .active flag is set!!!
->>>>>>> ffeast/develop
       filled = order.filled * order.sign
       self.position = self.position + filled
       self.order = nil
@@ -316,7 +259,6 @@ function SmartOrder:process()
             end
           else
             local result = sendTransaction({
-<<<<<<< HEAD
               ACCOUNT=self.account,
               CLIENT_CODE=self.client,
               CLASSCODE=self.market,
@@ -324,26 +266,11 @@ function SmartOrder:process()
               TRANS_ID="666",
               ACTION="KILL_ORDER",
               ORDER_KEY=tostring(self.order.number),
-=======
-              ACCOUNT = self.account,
-              CLIENT_CODE = self.client,
-              CLASSCODE = self.market,
-              SECCODE = self.ticker,
-              TRANS_ID = "666",
-              ACTION = "KILL_ORDER",
-              ORDER_KEY = tostring(self.order.number)
->>>>>>> ffeast/develop
             })
             if result == "" then
               self.order.cancelled = os.time()
-            else
-              log:trace("transaction sending error: " .. tostring(result))
             end
-<<<<<<< HEAD
             log:debug("Kill order!")
-=======
-            log:debug("kill order")
->>>>>>> ffeast/develop
           end
         end
       end
@@ -354,27 +281,18 @@ function SmartOrder:process()
     if diff ~= 0 then
       if self.order == nil then
         local absdiff = math.abs(diff)
-        log:debug("sending transaction for " .. tostring(diff) .. " items")
-        self.order = {
-          sign = diff / absdiff,
-          price = self.price,
-          quantity = diff,
-          active = true,
-          filled = 0,
-        }
         local result = sendTransaction({
-          ACCOUNT = self.account,
-          CLIENT_CODE = self.client,
-          CLASSCODE = self.market,
-          SECCODE = self.ticker,
-          TYPE = "L",
-          TRANS_ID = tostring(self.trans_id),
-          ACTION = "NEW_ORDER",
-          OPERATION = (diff > 0 and "B") or "S",
-          PRICE = tostring(self.price),
-          QUANTITY = tostring(absdiff)
+          ACCOUNT=self.account,
+          CLIENT_CODE=self.client,
+          CLASSCODE=self.market,
+          SECCODE=self.ticker,
+          TYPE="L",
+          TRANS_ID=tostring(self.trans_id),
+          ACTION="NEW_ORDER",
+          OPERATION=(diff > 0 and "B") or "S",
+          PRICE=tostring(self.price),
+          QUANTITY=tostring(absdiff)
         })
-<<<<<<< HEAD
 
         if result == "" then
           self.order = {
@@ -388,20 +306,14 @@ function SmartOrder:process()
         else       
           log:debug("New order ERROR: "..result)
         end  
-=======
-        if result ~= "" then
-          log:warning("transaction sending error: " .. tostring(result))
-        else
-          log:trace("transaction ok")
-        end
->>>>>>> ffeast/develop
       end
     end
   end
 end
 setmetatable(SmartOrder, __object_behaviour)
 
--- LOGGING
+
+--[[ LOGGING ]]--
 log = {
     logfile = nil,
     loglevel = -1,
@@ -442,82 +354,71 @@ function log:fatal(t)
   self:error(t)
   error(t)
 end
-function log:setlevel(loglevel)
-  self.loglevel = loglevel;
-end
 
--- MAIN LOOP
-WORKING_FLAG = true
-
+--[[ MAIN LOOP ]]--
+working = true
 function main()
-  log:trace("robot started")
+  --create_table()
+  log:trace("Robot started")
   if Start ~= nil then
     Start()
   end
   if Robot ~= nil then
     local routine = coroutine.create(Robot)
-    while WORKING_FLAG do
+    while working do
       local res, errmsg = coroutine.resume(routine)
       if res == false then
-        log:fatal("broken coroutine: " .. errmsg)
+        log:fatal("Broken coroutine: " .. errmsg)
       end
       if coroutine.status(routine) == "dead" then
-        log:trace("robot routine finished")
+        log:trace("Robot routine finished")
         break
       end
-      -- orders processing calls after every coroutine iteration
+      -- Orders processing calls after every coroutine iteration
       for trans_id, smartorder in pairs(SmartOrder.pool) do
         smartorder:process()
       end
     end
   end
-  log:trace("robot stopped")
+  log:trace("Robot stopped")
   if Stop ~= nil then
     Stop()
   end
   io.close(log.logfile)
 end
 
--- TRANSACTION CALLBACK
+--[[ TRANSACTION CALLBACK ]]--
 function OnTransReply(trans_reply)
   local key = trans_reply.trans_id
   local executor = SmartOrder.pool[key]
   if executor ~= nil then
-    log:trace("trans status: " .. tostring(trans_reply.status))
-    if trans_reply.status == QUIK.TRANS_REPLY.COMPLETE then
-      executor.order.number = trans_reply.order_num
+    if trans_reply.status == 3 then
+      executor.order.number = trans_reply.ordernum
     else
       executor.order = nil
     end
   end
 end
 
--- ORDERS CALLBACK
+--[[ ORDERS CALLBACK ]]--
 function OnOrder(order)
   local key = order.trans_id
   local executor = SmartOrder.pool[key]
-  -- there isn't order if was executed immediately
+  -- There isn't order if was executed imidiately!
   if executor ~= nil and executor.order ~= nil then
-    log:trace("OnOrder key "
-              .. tostring(key)
-              .. ", flags: "
-              .. tostring(order.flags))
     executor.order.filled = order.qty - order.balance
-    -- other statuses?
-    if bitand(order.flags, QUIK.ORDER_BITMAP.ACTIVE) == 0 then
+    if (order.flags % 2) == 0 then
       executor.order.active = false
     end
   end
 end
-
-WITH_GUI = false
-
--- INIT CALLBACK
+withgui = false
+--[[ INIT CALLBACK ]]--
 function OnInit(path)
   -- Only there it's possible to take path
   log.logfile = io.open(path..'.log', 'w')
   -- Table creation
-  if WITH_GUI == true then
+  if withgui == true then
     local table_id = AllocTable()
     if CreateWindow(table_id) == 1 then
       log:trace("SmartOrders table created, id=" .. table_id)
@@ -531,10 +432,11 @@ function OnInit(path)
   end
 end
 
--- END CALLBACK
+
+--[[ END CALLBACK ]]--
 function OnStop(stop_flag)
-  WORKING_FLAG = false
-  if WITH_GUI == true then
+  working = false
+  if withgui == true then
     DestroyTable(SmartOrder.table)
   end
 end
