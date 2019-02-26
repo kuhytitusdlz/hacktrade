@@ -275,6 +275,18 @@ $ busted tests.lua
 $ busted tests.lua -l
 ```
 
+###### Установка busted на Windows 7
+1. Скачать [Lua](https://sourceforge.net/projects/luabinaries/files/5.1.5) (пакеты _lua-5.1.5_Win32_bin.zip_, _lua-5.1.5_Sources.zip_) и распаковать в `c:\lua\`
+2. Скачать и распаковать [LuaRocks](http://luarocks.github.io/luarocks/releases/) (пакет `luarocks-3.0.4-win32.zip - legacy Windows package, includes Lua 5.1)`
+3. Положить `curl.exe` (можно взять из Windows 10) в `system32`
+4. Установить LuaRocks запустив `install.bat`
+5. Установить busted (возможно также потребуется [MinGw](http://www.mingw.org/)):
+`luarocks.bat --verbose install busted`
+6. Отредактировать `LuaRocks/bin/busted.bat` добавив второй строкой  смену кодировки на UTF-8:
+```bash
+chcp 65001 > nul
+```
+Сменить в настройках `cmd.exe` шрифт на `Lucida Console` (шрифт по умолчанию не поддерживает UTF-8)
 
 Участие в проекте
 -----------------
