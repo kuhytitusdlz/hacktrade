@@ -469,45 +469,46 @@ describe("hacktrade", function()
       indicator = Indicator{tag = "test"}
     end)
 
-    it("по числовому ключу либо all возвращается первый индикатор", function()
-      assert.are.same({open = 1, close = 2}, indicator[1])
-      assert.are.same({open = 1, close = 2}, indicator.all[1])
+    it("по числовому ключу возвращается close первого индикатора", function()
+      assert.are.same(2, indicator[1])
+    end)
+
+    it("по ключу values возвращается все атрибуты", function()
+      assert.are.same({open = 1, close = 2}, indicator.values[1])
     end)
 
     it("явный запрос по первому ключу без указания номера линии", function()
-      assert.are.equal(2, indicator.values[1])
       assert.are.equal(2, indicator.closes[1])
       assert.are.equal(1, indicator.opens[1])
     end)
 
     it("явный запрос по последнему ключу без указания номера линии", function()
-      assert.are.equal(4, indicator.values[3])
       assert.are.equal(4, indicator.closes[3])
       assert.are.equal(3, indicator.opens[3])
     end)
 
     it("явный запрос по ключу с указанием номера линии", function()
-      assert.are.equal(20, indicator.values_1[1])
       assert.are.equal(20, indicator.closes_1[1])
       assert.are.equal(10, indicator.opens_1[1])
     end)
 
-    it("по числовому ключу либо all можно запросить данные с конца", function()
-      assert.are.same({open = 3, close = 4}, indicator[-1])
-      assert.are.same({open = 3, close = 4}, indicator.all[-1])
+    it("по числовому ключу можно запросить данные с конца", function()
+      assert.are.same(4, indicator[-1])
+    end)
+
+    it("по ключу values можно запросить данные с конца", function()
+      assert.are.same({open = 3, close = 4}, indicator.values[-1])
     end)
 
     it("явный запрос по ключу с конца без указания номера линии", function()
-      assert.are.equal(4, indicator.values[-1])
       assert.are.equal(4, indicator.closes[-1])
       assert.are.equal(3, indicator.opens[-1])
     end)
 
     it("явный запрос по ключу с конца с указанием номера линии", function()
-      assert.are.equal(40, indicator.values_1[-1])
       assert.are.equal(40, indicator.closes_1[-1])
       assert.are.equal(30, indicator.opens_1[-1])
-      assert.are.same({open = 30, close = 40}, indicator.all_1[-1])
+      assert.are.same({open = 30, close = 40}, indicator.values_1[-1])
     end)
 
     it("запросы по несуществующим индексам", function()

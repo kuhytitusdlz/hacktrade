@@ -172,7 +172,7 @@ function Indicator:__index(key)
   local extractor = nil
   if type(key) == "number" then
     extractor = key
-    key = "all_0"
+    key = "closes_0"
   end
   local line = key:match("%d+")
   local field = key:match("%a+")
@@ -184,11 +184,8 @@ function Indicator:__index(key)
   if n == 0 then
     log:fatal("can't load data for chart with tag: "..self.tag)
   end
-  if field ~= nil and field ~= "all" then
+  if field ~= nil and field ~= "values" then
     field = field:sub(0, -2)
-    if field == "value" then
-      field = "close"
-    end
     for idx = 1, #data do
       data[idx] = data[idx][field]
     end
