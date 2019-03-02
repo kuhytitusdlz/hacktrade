@@ -431,9 +431,6 @@ describe("hacktrade", function()
   describe("для объекта Indicator", function()
     local indicator
     before_each(function()
-      _G.getNumCandles = function(tag)
-        return 3
-      end
       _G.getCandlesByIndex = function(tag, line, first_candle, count)
         local data = {}
         data[0] = {
@@ -466,54 +463,102 @@ describe("hacktrade", function()
         }
         return data[line], 3, "test"
       end
-      indicator = Indicator{tag = "test"}
     end)
 
-    it("по числовому ключу возвращается close первого индикатора", function()
-      assert.are.same(2, indicator[1])
+    describe("при отдаче данных с 3-й попытки", function()
+      before_each(function()
+        local c = {called = 0}
+        _G.getNumCandles = mock(function()
+          c.called = c.called + 1
+          if c.called == 3 then
+            return 1
+          end
+          return 0
+        end)
+        _G.sleep = mock(function()
+        end)
+      end)
+
+      describe("и дефолтном ограничении на число попыток", function()
+        before_each(function()
+          indicator = Indicator{tag = "test"}
+        end)
+
+        it("они в итоге извлекаются", function()
+          local _ = indicator.values[1]
+          assert.stub(_G.getNumCandles).was.called(3)
+          assert.stub(_G.sleep).was.called(2)
+        end)
+      end)
+
+      describe("при меньшем числе заданных попыток", function()
+        before_each(function()
+          indicator = Indicator{tag = "test", max_tries = 2}
+        end)
+
+        it("возвращается ошибка", function()
+          assert.has_error(function()
+            _ = indicator.values[1]
+          end)
+          assert.stub(_G.getNumCandles).was.called(2)
+        end)
+      end)
     end)
 
-    it("по ключу values возвращается все атрибуты", function()
-      assert.are.same({open = 1, close = 2}, indicator.values[1])
-    end)
+    describe("при успешном получении данных", function()
+      before_each(function()
+        _G.getNumCandles = function(tag)
+          return 3
+        end
+        indicator = Indicator{tag = "test"}
+      end)
 
-    it("явный запрос по первому ключу без указания номера линии", function()
-      assert.are.equal(2, indicator.closes[1])
-      assert.are.equal(1, indicator.opens[1])
-    end)
+      it("по числовому ключу возвращается close первого индикатора", function()
+        assert.are.same(2, indicator[1])
+      end)
 
-    it("явный запрос по последнему ключу без указания номера линии", function()
-      assert.are.equal(4, indicator.closes[3])
-      assert.are.equal(3, indicator.opens[3])
-    end)
+      it("по ключу values возвращается все атрибуты", function()
+        assert.are.same({open = 1, close = 2}, indicator.values[1])
+      end)
 
-    it("явный запрос по ключу с указанием номера линии", function()
-      assert.are.equal(20, indicator.closes_1[1])
-      assert.are.equal(10, indicator.opens_1[1])
-    end)
+      it("явный запрос по первому ключу без указания номера линии", function()
+        assert.are.equal(2, indicator.closes[1])
+        assert.are.equal(1, indicator.opens[1])
+      end)
 
-    it("по числовому ключу можно запросить данные с конца", function()
-      assert.are.same(4, indicator[-1])
-    end)
+      it("явный запрос по последнему ключу без указания номера линии", function()
+        assert.are.equal(4, indicator.closes[3])
+        assert.are.equal(3, indicator.opens[3])
+      end)
 
-    it("по ключу values можно запросить данные с конца", function()
-      assert.are.same({open = 3, close = 4}, indicator.values[-1])
-    end)
+      it("явный запрос по ключу с указанием номера линии", function()
+        assert.are.equal(20, indicator.closes_1[1])
+        assert.are.equal(10, indicator.opens_1[1])
+      end)
 
-    it("явный запрос по ключу с конца без указания номера линии", function()
-      assert.are.equal(4, indicator.closes[-1])
-      assert.are.equal(3, indicator.opens[-1])
-    end)
+      it("по числовому ключу можно запросить данные с конца", function()
+        assert.are.same(4, indicator[-1])
+      end)
 
-    it("явный запрос по ключу с конца с указанием номера линии", function()
-      assert.are.equal(40, indicator.closes_1[-1])
-      assert.are.equal(30, indicator.opens_1[-1])
-      assert.are.same({open = 30, close = 40}, indicator.values_1[-1])
-    end)
+      it("по ключу values можно запросить данные с конца", function()
+        assert.are.same({open = 3, close = 4}, indicator.values[-1])
+      end)
 
-    it("запросы по несуществующим индексам", function()
-      assert.is_nil(indicator[-100])
-      assert.is_nil(indicator[100])
+      it("явный запрос по ключу с конца без указания номера линии", function()
+        assert.are.equal(4, indicator.closes[-1])
+        assert.are.equal(3, indicator.opens[-1])
+      end)
+
+      it("явный запрос по ключу с конца с указанием номера линии", function()
+        assert.are.equal(40, indicator.closes_1[-1])
+        assert.are.equal(30, indicator.opens_1[-1])
+        assert.are.same({open = 30, close = 40}, indicator.values_1[-1])
+      end)
+
+      it("запросы по несуществующим индексам", function()
+        assert.is_nil(indicator[-100])
+        assert.is_nil(indicator[100])
+      end)
     end)
   end)
 

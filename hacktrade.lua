@@ -164,11 +164,15 @@ end
 setmetatable(History, __object_behaviour)
 
 -- You can access by closes_0, values, values_1
-Indicator = {}
+Indicator = {max_tries = 1000}
 function Indicator:init()
-  log:trace("indicator created with tag: " .. self.tag)
+  log:trace("indicator created with tag: " .. self.tag
+            .. ", max tries: " .. tostring(self.max_tries))
 end
 function Indicator:__index(key)
+  if Indicator[key] ~= nil then
+    return Indicator[key]
+  end
   local extractor = nil
   if type(key) == "number" then
     extractor = key
@@ -179,10 +183,27 @@ function Indicator:__index(key)
   if line == nil then
     line = 0
   end
-  local candles = getNumCandles(self.tag)
+
+  local candles = 0
+  local tried = 0
+  while tried < self.max_tries and candles == 0 do
+    if tried > 0 then
+      log:trace("retry #" .. tostring(tried) .. " to load: " .. self.tag)
+      sleep(100)
+    end
+    candles = getNumCandles(self.tag)
+    tried = tried + 1
+  end
+  if candles == 0 then
+    log:fatal("can't find data for chart with tag: "
+              .. self.tag .. " after " .. self.max_tries .. " tries")
+  elseif tried > 1 then
+    log:trace("data load ok for: " .. self.tag)
+  end
+
   local data, n, b = getCandlesByIndex(self.tag, tonumber(line), 0, candles)
   if n == 0 then
-    log:fatal("can't load data for chart with tag: "..self.tag)
+    log:fatal("can't load data for chart with tag: ".. self.tag)
   end
   if field ~= nil and field ~= "values" then
     field = field:sub(0, -2)
@@ -441,7 +462,7 @@ WITH_GUI = false
 -- INIT CALLBACK
 function OnInit(path)
   -- Only there it's possible to take path
-  log.logfile = io.open(path..'.log', 'a')
+  log.logfile = io.open(path .. '.log', 'a')
   -- Table creation
   if WITH_GUI == true then
     local table_id = AllocTable()
