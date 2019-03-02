@@ -441,7 +441,7 @@ WITH_GUI = false
 -- INIT CALLBACK
 function OnInit(path)
   -- Only there it's possible to take path
-  log.logfile = io.open(path..'.log', 'w')
+  log.logfile = io.open(path..'.log', 'a')
   -- Table creation
   if WITH_GUI == true then
     local table_id = AllocTable()
