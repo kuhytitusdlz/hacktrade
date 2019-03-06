@@ -164,7 +164,7 @@ end
 setmetatable(History, __object_behaviour)
 
 -- You can access by closes_0, values, values_1
-Indicator = {max_tries = 1000}
+Indicator = {max_tries = 10000}
 function Indicator:init()
   log:trace("indicator created with tag: " .. self.tag
             .. ", max tries: " .. tostring(self.max_tries))
