@@ -443,15 +443,17 @@ end
 function OnOrder(order)
   local key = order.trans_id
   local executor = SmartOrder.pool[key]
+  log:trace("OnOrder key "
+            .. tostring(key)
+            .. ", flags: "
+            .. tostring(order.flags))
   -- there isn't order if was executed immediately
   if executor ~= nil and executor.order ~= nil then
-    log:trace("OnOrder key "
-              .. tostring(key)
-              .. ", flags: "
-              .. tostring(order.flags))
+    log:trace("Filled calculation for balance: " .. tostring(order.balance))
     executor.order.filled = order.qty - order.balance
     -- other statuses?
     if bitand(order.flags, QUIK.ORDER_BITMAP.ACTIVE) == 0 then
+      log:trace("Inactivating order")
       executor.order.active = false
     end
   end
