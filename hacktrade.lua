@@ -164,31 +164,49 @@ end
 setmetatable(History, __object_behaviour)
 
 -- You can access by closes_0, values, values_1
-Indicator = {}
+Indicator = {max_tries = 10000}
 function Indicator:init()
-  log:trace("indicator created with tag: " .. self.tag)
+  log:trace("indicator created with tag: " .. self.tag
+            .. ", max tries: " .. tostring(self.max_tries))
 end
 function Indicator:__index(key)
+  if Indicator[key] ~= nil then
+    return Indicator[key]
+  end
   local extractor = nil
   if type(key) == "number" then
     extractor = key
-    key = "all_0"
+    key = "closes_0"
   end
   local line = key:match("%d+")
   local field = key:match("%a+")
   if line == nil then
     line = 0
   end
-  local candles = getNumCandles(self.tag)
+
+  local candles = 0
+  local tried = 0
+  while tried < self.max_tries and candles == 0 do
+    if tried > 0 then
+      log:trace("retry #" .. tostring(tried) .. " to load: " .. self.tag)
+      sleep(100)
+    end
+    candles = getNumCandles(self.tag)
+    tried = tried + 1
+  end
+  if candles == 0 then
+    log:fatal("can't find data for chart with tag: "
+              .. self.tag .. " after " .. self.max_tries .. " tries")
+  elseif tried > 1 then
+    log:trace("data load ok for: " .. self.tag)
+  end
+
   local data, n, b = getCandlesByIndex(self.tag, tonumber(line), 0, candles)
   if n == 0 then
-    log:fatal("can't load data for chart with tag: "..self.tag)
+    log:fatal("can't load data for chart with tag: ".. self.tag)
   end
-  if field ~= nil and field ~= "all" then
+  if field ~= nil and field ~= "values" then
     field = field:sub(0, -2)
-    if field == "value" then
-      field = "close"
-    end
     for idx = 1, #data do
       data[idx] = data[idx][field]
     end
@@ -425,15 +443,17 @@ end
 function OnOrder(order)
   local key = order.trans_id
   local executor = SmartOrder.pool[key]
+  log:trace("OnOrder key "
+            .. tostring(key)
+            .. ", flags: "
+            .. tostring(order.flags))
   -- there isn't order if was executed immediately
   if executor ~= nil and executor.order ~= nil then
-    log:trace("OnOrder key "
-              .. tostring(key)
-              .. ", flags: "
-              .. tostring(order.flags))
+    log:trace("Filled calculation for balance: " .. tostring(order.balance))
     executor.order.filled = order.qty - order.balance
     -- other statuses?
     if bitand(order.flags, QUIK.ORDER_BITMAP.ACTIVE) == 0 then
+      log:trace("Inactivating order")
       executor.order.active = false
     end
   end
@@ -444,7 +464,7 @@ WITH_GUI = false
 -- INIT CALLBACK
 function OnInit(path)
   -- Only there it's possible to take path
-  log.logfile = io.open(path..'.log', 'w')
+  log.logfile = io.open(path .. '.log', 'a')
   -- Table creation
   if WITH_GUI == true then
     local table_id = AllocTable()
