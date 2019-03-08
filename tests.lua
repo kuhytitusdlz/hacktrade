@@ -9,6 +9,14 @@ describe("hacktrade", function()
 
   describe("при запуске робота", function()
 
+    before_each(function()
+      _G.Robot = nil
+      _G.Start = nil
+      _G.Stop = nil
+      _G.sleep = nil
+      _G.sendTransaction = nil
+    end)
+
     it("происходит корректный возврат из Trade()", function()
       local called = false
       _G.Robot = function()
@@ -58,7 +66,8 @@ describe("hacktrade", function()
           market = "M1",
           ticker = "T1",
           account = "A1",
-          client = "C1"
+          client = "C1",
+          max_tries = 2
         }
       order:update(10.0, 2)
       _G.Robot = trade
@@ -108,6 +117,45 @@ describe("hacktrade", function()
             active = false,
             filled = 2
           }, order.order)
+      end)
+    end)
+
+    describe("при вызове ожидания выполнения ордера", function()
+
+      before_each(function()
+        _G.Robot = function()
+          order:fill()
+        end
+        _G.sendTransaction = function()
+        end
+      end)
+
+      describe("при срабатывании в пределах отведенных попыток", function()
+        before_each(function()
+          _G.sleep = mock(function()
+            OnOrder({
+              trans_id = order.trans_id,
+              qty = 2,
+              balance = 0,
+              flags = 0x2
+            })
+          end)
+          main()
+        end)
+        it("fill выполняется", function()
+          assert.is_true(order.filled)
+        end)
+      end)
+
+      describe("при не срабатывании в пределах отведенных попыток", function()
+        before_each(function()
+          _G.sleep = mock(function()
+          end)
+        end)
+        it("возникает ошибка", function()
+          assert.has_error(function() main() end)
+          assert.stub(_G.sleep).was.called(2)
+        end)
       end)
     end)
 

@@ -225,6 +225,7 @@ SmartOrder = {
   -- 666 - Warning! This number uses for cancelling!
   lower = 1000,
   upper = 10000,
+  max_tries = 10000,
   pool = {}
 }
 function SmartOrder:__index(key)
@@ -265,6 +266,22 @@ function SmartOrder:update(price, planned)
   end
   if planned ~= nil then
     self.planned = planned
+  end
+end
+function SmartOrder:fill()
+  local tried = 0
+  while (not self.filled and tried < self.max_tries) do
+    tried = tried + 1
+    log:trace("waiting for order filled, tried " .. tried .. " times")
+    Trade()
+    sleep(10)
+  end
+  if not self.filled then
+    self:update(nil, 0)
+    Trade()
+    log:fatal("Unable to complete order after "
+              .. tostring(self.max_tries)
+              .. " tries")
   end
 end
 function SmartOrder:process()
