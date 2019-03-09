@@ -362,12 +362,16 @@ log = {
 }
 function log:log(log_text, log_level)
   if (log_level >= self.loglevel) then
-    local msg = string.format("[%s] %s: %s\n", os.date(), self.loglevels[log_level], log_text)
-    if (log_level > 0) then
-      message(msg, log_level)
+    if self.logfile then
+      local msg = string.format("[%s] %s: %s\n", os.date(), self.loglevels[log_level], log_text)
+      if (log_level > 0) then
+        message(msg, log_level)
+      end
+        self.logfile:write(msg)
+        self.logfile:flush()
+    else
+      PrintDbgStr("QLua: " .. self.loglevels[log_level] .. ": " .. log_text)
     end
-    self.logfile:write(msg)
-    self.logfile:flush()
   end
 end
 function log:debug(t)
@@ -464,7 +468,9 @@ WITH_GUI = false
 -- INIT CALLBACK
 function OnInit(path)
   -- Only there it's possible to take path
-  log.logfile = io.open(path .. '.log', 'a')
+  --log.logfile = io.open(path .. '.log', 'a')
+  -- If you want to use Dbgview.exe
+  log.logfile = nil
   -- Table creation
   if WITH_GUI == true then
     local table_id = AllocTable()
