@@ -4,12 +4,13 @@
  Nano-framework for HFT-robots development.
  Docs: https://github.com/ffeast/hacktrade
  -----------------------------------------------------------
- � Denis Kolodin and https://github.com/ffeast
+ © Denis Kolodin and https://github.com/ffeast
 
 --]]
 
 -- SERVICE FUNCTIONS
 function table.reverse(tab)
+  log:debug("table.reverse()")
   local size = #tab
   local ntab = {}
   for i, v in ipairs(tab) do
@@ -19,6 +20,7 @@ function table.reverse(tab)
 end
 
 function table.transform(tab, felem)
+  log:debug("table.transform()")
   local ntab = {}
   for idx = 1, #tab do
     ntab[idx] = felem(tab[idx])
@@ -27,17 +29,18 @@ function table.transform(tab, felem)
 end
 
 function bitand(a, b)
-    local result = 0
-    local bitval = 1
-    while a > 0 and b > 0 do
-      if a % 2 == 1 and b % 2 == 1 then -- test the rightmost bits
-          result = result + bitval      -- set the current bit
-      end
-      bitval = bitval * 2 -- shift left
-      a = math.floor(a / 2) -- shift right
-      b = math.floor(b / 2)
+  log:debug("bitand()")
+  local result = 0
+  local bitval = 1
+  while a > 0 and b > 0 do
+    if a % 2 == 1 and b % 2 == 1 then -- test the rightmost bits
+        result = result + bitval      -- set the current bit
     end
-    return result
+    bitval = bitval * 2 -- shift left
+    a = math.floor(a / 2) -- shift right
+    b = math.floor(b / 2)
+  end
+  return result
 end
 
 -- CONSTANTS
@@ -82,6 +85,7 @@ Trade = coroutine.yield
 -- OOP support
 __object_behaviour = {
   __call = function(meta, o)
+    log:debug("__call()")
     if meta.__index == nil then
       setmetatable(o, {__index = meta})
     else
@@ -95,6 +99,7 @@ __object_behaviour = {
 }
 
 function round(num, idp)
+  log:debug("round()")
   local mult = 10 ^ (idp or 0)
   return math.floor(num * mult + 0.5) / mult
 end
@@ -102,16 +107,20 @@ end
 -- MARKET DATA
 MarketData = {}
 function MarketData._pvconverter(elem)
+  log:debug("MarketData._pvconverter()")
   local nelem = {}
   nelem.price = tonumber(elem.price)
   nelem.quantity = tonumber(elem.quantity)
   return nelem
 end
 function MarketData:init()
+  log:debug("MarketData:init()")
   log:trace("marketData created: " .. self.market .. " " .. self.ticker)
 end
 function MarketData:__index(key)
+  log:debug("MarketData:__index()")
   if MarketData[key] ~= nil then
+    log:debug("MarketData[key] = " .. tostring(MarketData[key]))
     return MarketData[key]
   end
   if key == "bids" then
@@ -136,11 +145,13 @@ function MarketData:__index(key)
   end
 end
 function MarketData:fit(price)
+  log:debug("MarketData:fit()")
   local step = feed.sec_price_step
   local result = math.floor(price / step) * step
   return round(result, self.sec_scale)
 end
 function MarketData:move(price, val)
+  log:debug("MarketData:move()")
   local step = feed.sec_price_step
   local result = (math.floor(price / step) * step) + (val * step)
   return round(result, self.sec_scale)
@@ -150,6 +161,7 @@ setmetatable(MarketData, __object_behaviour)
 -- HISTORY DATA SOURCE
 History = {}
 function History:__index(key)
+  log:debug("History:__index()")
   if math.abs(key) > #self then
     return nil
   end
@@ -166,10 +178,12 @@ setmetatable(History, __object_behaviour)
 -- You can access by closes_0, values, values_1
 Indicator = {max_tries = 10000}
 function Indicator:init()
+  log:debug("Indicator:init()")
   log:trace("indicator created with tag: " .. self.tag
             .. ", max tries: " .. tostring(self.max_tries))
 end
 function Indicator:__index(key)
+  log:debug("Indicator:__index()")
   if Indicator[key] ~= nil then
     return Indicator[key]
   end
@@ -228,6 +242,7 @@ SmartOrder = {
   pool = {}
 }
 function SmartOrder:__index(key)
+  log:debug("SmartOrder:__index()")
   if SmartOrder[key] ~= nil then
     return SmartOrder[key]
   end
@@ -241,6 +256,7 @@ function SmartOrder:__index(key)
   return nil
 end
 function SmartOrder:init()
+  log:debug("SmartOrder:init()")
   math.randomseed(os.time())
   for i = self.lower, self.upper do
     local key = math.random(self.lower, self.upper)
@@ -257,9 +273,11 @@ function SmartOrder:init()
   log:trace("SmartOrder created with trans_id: " .. self.trans_id)
 end
 function SmartOrder:destroy()
+  log:debug("SmartOrder:destroy()")
   SmartOrder.pool[self.trans_id] = nil
 end
 function SmartOrder:update(price, planned)
+  log:debug("SmartOrder:update()")
   if price ~= nil then
     self.price = price
   end
@@ -268,6 +286,7 @@ function SmartOrder:update(price, planned)
   end
 end
 function SmartOrder:process()
+  log:debug("SmartOrder:process()")
   log:debug("processing SmartOrder " .. self.trans_id)
   local order = self.order
   if order ~= nil then
@@ -351,7 +370,7 @@ setmetatable(SmartOrder, __object_behaviour)
 -- LOGGING
 log = {
     logfile = nil,
-    loglevel = 0,
+    loglevel = -1,
     loglevels = {
         [-1] = 'Debug',
         [ 0] = 'Trace',
@@ -370,6 +389,7 @@ function log:log(log_text, log_level)
         self.logfile:write(msg)
         self.logfile:flush()
     else
+      -- If you want to use Dbgview.exe
       PrintDbgStr("QLua: " .. self.loglevels[log_level] .. ": " .. log_text)
     end
   end
@@ -401,7 +421,7 @@ end
 WORKING_FLAG = true
 
 function main()
-  log:trace("robot started")
+  log:debug("main()")
   if Start ~= nil then
     Start()
   end
@@ -422,15 +442,16 @@ function main()
       end
     end
   end
-  log:trace("robot stopped")
   if Stop ~= nil then
     Stop()
   end
-  io.close(log.logfile)
+  log:debug("main() stopped")
 end
 
 -- TRANSACTION CALLBACK
 function OnTransReply(trans_reply)
+  -- получение ответа на транзакцию 
+  log:debug("OnTransReply()")
   local key = trans_reply.trans_id
   local executor = SmartOrder.pool[key]
   if executor ~= nil then
@@ -445,6 +466,8 @@ end
 
 -- ORDERS CALLBACK
 function OnOrder(order)
+	-- получение/изменение сделки
+  log:debug("OnOrder()")
   local key = order.trans_id
   local executor = SmartOrder.pool[key]
   log:trace("OnOrder key "
@@ -469,8 +492,7 @@ WITH_GUI = false
 function OnInit(path)
   -- Only there it's possible to take path
   --log.logfile = io.open(path .. '.log', 'a')
-  -- If you want to use Dbgview.exe
-  log.logfile = nil
+  log:trace("OnInit()")
   -- Table creation
   if WITH_GUI == true then
     local table_id = AllocTable()
@@ -488,8 +510,13 @@ end
 
 -- END CALLBACK
 function OnStop(stop_flag)
+  -- остановка скрипта из диалога управления или закрытие терминала QUIK
+  log:trace("OnStop()")
   WORKING_FLAG = false
   if WITH_GUI == true then
     DestroyTable(SmartOrder.table)
+  end
+  if log.logfile then
+    io.close(log.logfile)
   end
 end
