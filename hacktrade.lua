@@ -286,7 +286,9 @@ function SmartOrder:update(price, planned)
     self.planned = planned
   end
 end
+
 function SmartOrder:fill()
+  -- экспериментальная функция SmartOrder:fill для ожидания выполнения заявки
   local tried = 0
   while (not self.filled and tried < self.max_tries) do
     tried = tried + 1
