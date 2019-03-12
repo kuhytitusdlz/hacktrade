@@ -85,7 +85,7 @@ Trade = coroutine.yield
 -- OOP support
 __object_behaviour = {
   __call = function(meta, o)
-    log:debug("__call()")
+    --log:debug("__call()")
     if meta.__index == nil then
       setmetatable(o, {__index = meta})
     else
@@ -118,7 +118,7 @@ function MarketData:init()
   log:trace("marketData created: " .. self.market .. " " .. self.ticker)
 end
 function MarketData:__index(key)
-  log:debug("MarketData:__index()")
+  --log:debug("MarketData:__index()")
   if MarketData[key] ~= nil then
     log:debug("MarketData[key] = " .. tostring(MarketData[key]))
     return MarketData[key]
@@ -161,7 +161,7 @@ setmetatable(MarketData, __object_behaviour)
 -- HISTORY DATA SOURCE
 History = {}
 function History:__index(key)
-  log:debug("History:__index()")
+  --log:debug("History:__index()")
   if math.abs(key) > #self then
     return nil
   end
@@ -183,7 +183,7 @@ function Indicator:init()
             .. ", max tries: " .. tostring(self.max_tries))
 end
 function Indicator:__index(key)
-  log:debug("Indicator:__index()")
+  --log:debug("Indicator:__index()")
   if Indicator[key] ~= nil then
     return Indicator[key]
   end
@@ -481,6 +481,12 @@ function OnTransReply(trans_reply)
       executor.order = nil
     end
   end
+	if log.loglevel == -1 then
+    for n,v in pairs(trans_reply) do
+      -- печать всех полей таблицы
+      log:debug(tostring(n) .. " = " .. tostring(v))
+    end
+  end
 end
 
 -- ORDERS CALLBACK
@@ -505,19 +511,20 @@ function OnOrder(order)
   end
 end
 
-WITH_GUI = false
-
+WITH_GUI = false  -- вкл/выкл GUI
+G_script_path = nil -- переменная для пути запускаемого скрипта
 -- INIT CALLBACK
 function OnInit(path)
-  -- Only there it's possible to take path
-  --log.logfile = io.open(path .. '.log', 'a')
+  G_script_path = path -- путь до запускаемого скрипта
+  -- Only there it's possible to take G_script_path
+  --log.logfile = io.open(G_script_path .. '.log', 'a')
   log:trace("OnInit()")
   -- Table creation
   if WITH_GUI == true then
     local table_id = AllocTable()
     if CreateWindow(table_id) == 1 then
       log:trace("SmartOrders table created, id=" .. table_id)
-      SetWindowCaption(table_id, "SmartOrders [" .. path .. "]")
+      SetWindowCaption(table_id, "SmartOrders [" .. G_script_path .. "]")
       AddColumn(table_id, "trans_id", nil, QTABLE_INT_TYPE, 10)
       AddColumn(table_id, "status", nil, QTABLE_STRING_TYPE, 10)
     else
