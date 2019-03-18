@@ -1,10 +1,9 @@
 describe("hacktrade", function()
   before_each(function()
     dofile("hacktrade.lua")
-    nop = function() end
-    log.log = nop
-    io.close = nop
-    io.open = nop
+    stub(log, "open")
+    stub(log, "close")
+    stub(log, "log")
   end)
 
   describe("при запуске робота", function()

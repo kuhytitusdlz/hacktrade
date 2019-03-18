@@ -377,6 +377,14 @@ log = {
         [ 3] = 'Error',
     }
 }
+function log:open(path)
+    self.logfile = io.open(path .. '.log', 'a')
+end
+function log:close()
+    if self.logfile ~= nil then
+        io.close(self.logfile)
+    end
+end
 function log:log(log_text, log_level)
   if (log_level >= self.loglevel) then
     local msg = string.format("[%s] %s: %s\n", os.date(), self.loglevels[log_level], log_text)
@@ -439,7 +447,7 @@ function main()
   if Stop ~= nil then
     Stop()
   end
-  io.close(log.logfile)
+  log:close()
 end
 
 -- TRANSACTION CALLBACK
@@ -481,7 +489,7 @@ WITH_GUI = false
 -- INIT CALLBACK
 function OnInit(path)
   -- Only there it's possible to take path
-  log.logfile = io.open(path .. '.log', 'a')
+  log:open(path)
   -- Table creation
   if WITH_GUI == true then
     local table_id = AllocTable()
@@ -495,6 +503,10 @@ function OnInit(path)
     end
     SmartOrder.table = table_id
   end
+end
+
+function IsWorking()
+  return WORKING_FLAG
 end
 
 -- END CALLBACK
