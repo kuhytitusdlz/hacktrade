@@ -370,15 +370,15 @@ log = {
     logfile = nil,
     loglevel = 0,
     loglevels = {
-        [-1] = 'Debug',
-        [ 0] = 'Trace',
-        [ 1] = 'Info',
-        [ 2] = 'Warning',
-        [ 3] = 'Error',
+        [-1] = "Debug",
+        [ 0] = "Trace",
+        [ 1] = "Info",
+        [ 2] = "Warning",
+        [ 3] = "Error",
     }
 }
 function log:open(path)
-    self.logfile = io.open(path .. '.log', 'a')
+    self.logfile = io.open(path .. ".log", "a")
 end
 function log:close()
     if self.logfile ~= nil then
