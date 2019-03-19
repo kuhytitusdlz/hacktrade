@@ -484,25 +484,10 @@ function OnOrder(order)
   end
 end
 
-WITH_GUI = false
-
 -- INIT CALLBACK
 function OnInit(path)
   -- Only there it's possible to take path
   log:open(path)
-  -- Table creation
-  if WITH_GUI == true then
-    local table_id = AllocTable()
-    if CreateWindow(table_id) == 1 then
-      log:trace("SmartOrders table created, id=" .. table_id)
-      SetWindowCaption(table_id, "SmartOrders [" .. path .. "]")
-      AddColumn(table_id, "trans_id", nil, QTABLE_INT_TYPE, 10)
-      AddColumn(table_id, "status", nil, QTABLE_STRING_TYPE, 10)
-    else
-      log:fatal("SmartOrders table not created!" .. table_id)
-    end
-    SmartOrder.table = table_id
-  end
 end
 
 function IsWorking()
@@ -512,7 +497,4 @@ end
 -- END CALLBACK
 function OnStop(stop_flag)
   WORKING_FLAG = false
-  if WITH_GUI == true then
-    DestroyTable(SmartOrder.table)
-  end
 end
