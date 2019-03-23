@@ -74,6 +74,14 @@ QUIK = {
     ACCEPTED = 0x80,
     REMAINDER = 0x100,
     ICEBERG = 0x200
+  },
+  MARKET = {
+    STOCKS = "TQBR",
+    FUTS = "SPBFUT"
+  },
+  LIMIT_KIND = {
+    T0 = 0,
+    T2 = 2
   }
 }
 
@@ -283,6 +291,52 @@ function SmartOrder:fill()
               .. tostring(self.max_tries)
               .. " tries")
   end
+end
+function SmartOrder:_convert2Lots(value)
+  local info = getSecurityInfo(self.market, self.ticker)
+  if info == nil then
+    log:fatal("unable to get security info for "
+              .. tostring(self.market)
+              .. " / "
+              .. tostring(self.ticker))
+  end
+  return value / info.lot_size
+end
+function SmartOrder:_load_futures()
+  local futs_tbl = "futures_client_holding"
+  local futs_cnt = getNumberOf(futs_tbl)
+  for i = 0, futs_cnt - 1 do
+    local fut = getItem(futs_tbl, i)
+    if fut.seccode == self.ticker then
+      return fut.totalnet
+    end
+  end
+  return 0
+end
+function SmartOrder:_load_stocks()
+  local stocks_tbl = "depo_limits"
+  local stocks_cnt = getNumberOf(stocks_tbl)
+  for i = 0, stocks_cnt - 1 do
+    local stock = getItem(stocks_tbl, i)
+    if (stock.sec_code == self.ticker
+          and stock.limit_kind == QUIK.LIMIT_KIND.T2) then
+        return self:_convert2Lots(stock.currentbal)
+    end
+  end
+  return 0
+end
+function SmartOrder:load()
+  local position
+  if self.market == QUIK.MARKET.FUTS then
+    position = self:_load_futures()
+  elseif self.market == QUIK.MARKET.STOCKS then
+    position = self:_load_stocks()
+  else
+    log:fatal("unsupported market: " .. tostring(self.market))
+  end
+
+  self.position = position
+  self.planned = position
 end
 function SmartOrder:process()
   log:debug("processing SmartOrder " .. self.trans_id)
