@@ -637,6 +637,47 @@ describe("hacktrade", function()
     end)
   end)
 
+  describe("для объекта ServerInfo", function()
+    local server
+    describe("при запросе любого значения", function()
+      before_each(function()
+        _G.getInfoParam = mock(function()
+        end)
+        server = ServerInfo{}
+      end)
+      it("запрос пробрасывается в getInfoParam", function()
+        local _ = server.servertime
+        assert.stub(_G.getInfoParam).was.called()
+      end)
+      it("ключ преобразуется в верхний регистр", function()
+        local _ = server.serverTime
+        assert.stub(_G.getInfoParam).was.called_with('SERVERTIME')
+      end)
+    end)
+    describe("при найденом ответе", function()
+      before_each(function()
+        _G.getInfoParam = function()
+          return "test"
+        end
+        server = ServerInfo{}
+      end)
+      it("он возвращается в неизменном виде", function()
+        assert.are.same(server.someValue, "test")
+      end)
+    end)
+    describe("при пустом ответе", function()
+      before_each(function()
+        _G.getInfoParam = function()
+          return ""
+        end
+        server = ServerInfo{}
+      end)
+      it("возвращается nil", function()
+        assert.is_nil(server.someValue)
+      end)
+    end)
+  end)
+
   describe("для объекта Indicator", function()
     local indicator
     before_each(function()

@@ -107,6 +107,17 @@ function round(num, idp)
   return math.floor(num * mult + 0.5) / mult
 end
 
+-- SERVER INFO
+ServerInfo = {}
+function ServerInfo:__index(key)
+  local res = getInfoParam(string.upper(key))
+  if res == '' then
+    return nil
+  end
+  return res
+end
+setmetatable(ServerInfo, __object_behaviour)
+
 -- MARKET DATA
 MarketData = {}
 function MarketData._pvconverter(elem)
