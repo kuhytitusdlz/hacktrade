@@ -110,6 +110,9 @@ end
 -- SERVER INFO
 ServerInfo = {}
 function ServerInfo:__index(key)
+  if ServerInfo[key] ~= nil then
+    return ServerInfo[key]
+  end
   local res = getInfoParam(string.upper(key))
   if res == '' then
     return nil
