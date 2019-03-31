@@ -1,10 +1,9 @@
 describe("hacktrade", function()
   before_each(function()
     dofile("hacktrade.lua")
-    nop = function() end
-    log.log = nop
-    io.close = nop
-    io.open = nop
+    stub(log, "open")
+    stub(log, "close")
+    stub(log, "log")
   end)
 
   describe("при запуске робота", function()
@@ -52,6 +51,168 @@ describe("hacktrade", function()
       end
       main()
       assert.is.falsy(resumed)
+    end)
+  end)
+
+  describe("при загрузке имеющихся позиций в SmartOrder", function()
+    local order
+
+    local trade = function()
+      order:load()
+    end
+
+    before_each(function()
+      _G.getNumberOf = nil
+      _G.getItem = nil
+      _G.Robot = trade
+      _G.getNumberOf = function()
+        return 1
+      end
+      _G.getSecurityInfo = function(class_code, sec_code)
+        if class_code == 'TQBR' and sec_code == order.ticker then
+          return {
+            lot_size = 10
+          }
+        end
+        return nil
+      end
+    end)
+
+    describe("при работе с неизвестными рынками", function()
+      before_each(function()
+        order = SmartOrder{
+          market = "NO_SUCH_MARKET",
+          ticker = "T1",
+          account = "A1",
+          client = "C1"
+        }
+      end)
+
+      describe("при загрузке", function()
+        it("возникает ошибка", function()
+          assert.has_error(function() main() end)
+        end)
+      end)
+    end)
+
+    describe("при работе с акциями", function()
+      before_each(function()
+        order = SmartOrder{
+          market = "TQBR",
+          ticker = "T1",
+          account = "A1",
+          client = "C1"
+        }
+      end)
+      describe("при наличии совпадающих лонгов", function()
+        before_each(function()
+          _G.getItem = function()
+            return {
+              sec_code = "T1",
+              limit_kind = 2,
+              currentbal = 10
+            }
+          end
+          main()
+        end)
+
+        it("они загружаются", function()
+          assert.are.equal(order.planned, 1)
+        end)
+
+        it("filled корректно считается", function()
+          assert.is_truthy(order.filled)
+        end)
+      end)
+
+      describe("при наличии совпадающих шортов", function()
+        before_each(function()
+          _G.getItem = function()
+            return {
+              sec_code = "T1",
+              limit_kind = 2,
+              currentbal = -10
+            }
+          end
+          main()
+        end)
+
+        it("они загружаются", function()
+          assert.are.equal(order.planned, -1)
+        end)
+
+        it("filled корректно считается", function()
+          assert.is_truthy(order.filled)
+        end)
+      end)
+
+    end)
+
+    describe("при работе с фьючами", function()
+
+      before_each(function()
+        order = SmartOrder{
+          market = "SPBFUT",
+          ticker = "T1",
+          account = "A1",
+          client = "C1"
+        }
+      end)
+
+      describe("при наличии лонгов", function()
+        before_each(function()
+          _G.getItem = function()
+            return {
+              seccode = "T1",
+              totalnet = 1
+            }
+          end
+          main()
+        end)
+
+        it("они загружаются", function()
+          assert.are.equal(order.planned, 1)
+        end)
+
+        it("filled корректно считается", function()
+          assert.is_truthy(order.filled)
+        end)
+      end)
+
+      describe("при наличии шортов фьючей", function()
+        before_each(function()
+          _G.getItem = function()
+            return {
+              seccode = "T1",
+              totalnet = -1
+            }
+          end
+          main()
+        end)
+
+        it("они загружаются", function()
+          assert.are.equal(order.planned, -1)
+        end)
+
+        it("filled корректно считается", function()
+          assert.is_truthy(order.filled)
+        end)
+      end)
+
+      describe("при наличии прочих позиций", function()
+        before_each(function()
+          _G.getItem = function()
+            return {
+              seccode = "T2",
+              totalnet = 1
+            }
+          end
+          main()
+        end)
+        it("они игнорируются", function()
+          assert.are.equal(order.planned, 0)
+        end)
+      end)
     end)
   end)
 
@@ -472,6 +633,47 @@ describe("hacktrade", function()
             filled = 0
           }, order.order)
         end)
+      end)
+    end)
+  end)
+
+  describe("для объекта ServerInfo", function()
+    local server
+    describe("при запросе любого значения", function()
+      before_each(function()
+        _G.getInfoParam = mock(function()
+        end)
+        server = ServerInfo{}
+      end)
+      it("запрос пробрасывается в getInfoParam", function()
+        local _ = server.servertime
+        assert.stub(_G.getInfoParam).was.called()
+      end)
+      it("ключ преобразуется в верхний регистр", function()
+        local _ = server.serverTime
+        assert.stub(_G.getInfoParam).was.called_with('SERVERTIME')
+      end)
+    end)
+    describe("при найденом ответе", function()
+      before_each(function()
+        _G.getInfoParam = function()
+          return "test"
+        end
+        server = ServerInfo{}
+      end)
+      it("он возвращается в неизменном виде", function()
+        assert.are.same(server.someValue, "test")
+      end)
+    end)
+    describe("при пустом ответе", function()
+      before_each(function()
+        _G.getInfoParam = function()
+          return ""
+        end
+        server = ServerInfo{}
+      end)
+      it("возвращается nil", function()
+        assert.is_nil(server.someValue)
       end)
     end)
   end)
