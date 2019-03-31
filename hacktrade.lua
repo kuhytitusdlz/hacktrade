@@ -77,6 +77,14 @@ QUIK = {
     ACCEPTED = 0x80,
     REMAINDER = 0x100,
     ICEBERG = 0x200
+  },
+  MARKET = {
+    STOCKS = "TQBR",
+    FUTS = "SPBFUT"
+  },
+  LIMIT_KIND = {
+    T0 = 0,
+    T2 = 2
   }
 }
 
@@ -103,6 +111,20 @@ function round(num, idp)
   local mult = 10 ^ (idp or 0)
   return math.floor(num * mult + 0.5) / mult
 end
+
+-- SERVER INFO
+ServerInfo = {}
+function ServerInfo:__index(key)
+  if ServerInfo[key] ~= nil then
+    return ServerInfo[key]
+  end
+  local res = getInfoParam(string.upper(key))
+  if res == '' then
+    return nil
+  end
+  return res
+end
+setmetatable(ServerInfo, __object_behaviour)
 
 -- MARKET DATA
 MarketData = {}
@@ -304,6 +326,52 @@ function SmartOrder:fill()
               .. " tries")
   end
 end
+function SmartOrder:_convert2Lots(value)
+  local info = getSecurityInfo(self.market, self.ticker)
+  if info == nil then
+    log:fatal("unable to get security info for "
+              .. tostring(self.market)
+              .. " / "
+              .. tostring(self.ticker))
+  end
+  return value / info.lot_size
+end
+function SmartOrder:_load_futures()
+  local futs_tbl = "futures_client_holding"
+  local futs_cnt = getNumberOf(futs_tbl)
+  for i = 0, futs_cnt - 1 do
+    local fut = getItem(futs_tbl, i)
+    if fut.seccode == self.ticker then
+      return fut.totalnet
+    end
+  end
+  return 0
+end
+function SmartOrder:_load_stocks()
+  local stocks_tbl = "depo_limits"
+  local stocks_cnt = getNumberOf(stocks_tbl)
+  for i = 0, stocks_cnt - 1 do
+    local stock = getItem(stocks_tbl, i)
+    if (stock.sec_code == self.ticker
+          and stock.limit_kind == QUIK.LIMIT_KIND.T2) then
+        return self:_convert2Lots(stock.currentbal)
+    end
+  end
+  return 0
+end
+function SmartOrder:load()
+  local position
+  if self.market == QUIK.MARKET.FUTS then
+    position = self:_load_futures()
+  elseif self.market == QUIK.MARKET.STOCKS then
+    position = self:_load_stocks()
+  else
+    log:fatal("unsupported market: " .. tostring(self.market))
+  end
+
+  self.position = position
+  self.planned = position
+end
 function SmartOrder:process()
   log:debug("SmartOrder:process()")
   log:debug("processing SmartOrder " .. self.trans_id)
@@ -391,13 +459,21 @@ log = {
     logfile = nil,
     loglevel = -1,
     loglevels = {
-        [-1] = 'Debug',
-        [ 0] = 'Trace',
-        [ 1] = 'Info',
-        [ 2] = 'Warning',
-        [ 3] = 'Error',
+        [-1] = "Debug",
+        [ 0] = "Trace",
+        [ 1] = "Info",
+        [ 2] = "Warning",
+        [ 3] = "Error",
     }
 }
+function log:open(path)
+    self.logfile = io.open(path .. ".log", "a")
+end
+function log:close()
+    if self.logfile ~= nil then
+        io.close(self.logfile)
+    end
+end
 function log:log(log_text, log_level)
   if (log_level >= self.loglevel) then
     if self.logfile then
@@ -464,7 +540,11 @@ function main()
   if Stop ~= nil then
     Stop()
   end
+<<<<<<< HEAD
   log:debug("main() stopped")
+=======
+  log:close()
+>>>>>>> ffeast/develop
 end
 
 -- TRANSACTION CALLBACK
@@ -511,6 +591,7 @@ function OnOrder(order)
   end
 end
 
+<<<<<<< HEAD
 WITH_GUI = false  -- вкл/выкл GUI
 G_script_path = nil -- переменная для пути запускаемого скрипта
 -- INIT CALLBACK
@@ -532,6 +613,16 @@ function OnInit(path)
     end
     SmartOrder.table = table_id
   end
+=======
+-- INIT CALLBACK
+function OnInit(path)
+  -- Only there it's possible to take path
+  log:open(path)
+end
+
+function IsWorking()
+  return WORKING_FLAG
+>>>>>>> ffeast/develop
 end
 
 -- END CALLBACK
@@ -539,10 +630,13 @@ function OnStop(stop_flag)
   -- остановка скрипта из диалога управления или закрытие терминала QUIK
   log:trace("OnStop()")
   WORKING_FLAG = false
+<<<<<<< HEAD
   if WITH_GUI == true then
     DestroyTable(SmartOrder.table)
   end
   if log.logfile then
     io.close(log.logfile)
   end
+=======
+>>>>>>> ffeast/develop
 end
