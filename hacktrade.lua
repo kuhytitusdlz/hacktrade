@@ -415,7 +415,7 @@ function SmartOrder:process()
           CLIENT_CODE = self.client,
           CLASSCODE = self.market,
           SECCODE = self.ticker,
-          TYPE = "L",
+          TYPE = (self.price == 0 and "M") or "L",
           TRANS_ID = tostring(self.trans_id),
           ACTION = "NEW_ORDER",
           OPERATION = (diff > 0 and "B") or "S",

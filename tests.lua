@@ -320,6 +320,32 @@ describe("hacktrade", function()
       end)
     end)
 
+    describe("при нулевой цене", function()
+      before_each(function()
+        order:update(0, nil)
+        _G.sendTransaction = mock(function()
+          return ""
+        end)
+        main()
+      end)
+
+      it("в терминал уходит заявка по рынку", function()
+        assert.stub(_G.sendTransaction).was.called_with({
+            ACCOUNT = "A1",
+            CLIENT_CODE = "C1",
+            CLASSCODE = "M1",
+            SECCODE = "T1",
+            TYPE = "M",
+            TRANS_ID = tostring(order.trans_id),
+            ACTION = "NEW_ORDER",
+            OPERATION = "B",
+            PRICE = tostring(0.0),
+            QUANTITY = tostring(2)
+        })
+      end)
+    end)
+
+
     describe("и отсутствии гонок", function()
       before_each(function()
         _G.sendTransaction = mock(function()
