@@ -702,6 +702,31 @@ describe("hacktrade", function()
         assert.is_nil(server.someValue)
       end)
     end)
+    describe("при retry_on_empty = true", function()
+      before_each(function()
+        local c = {called = 0}
+        _G.getInfoParam = mock(function()
+          c.called = c.called + 1
+          if c.called == 1 then
+            return nil
+          elseif c.called == 2 then
+            return ''
+          elseif c.called == 3 then
+            return 1
+          end
+        end)
+        _G.sleep = mock(function()
+        end)
+        server = ServerInfo{retry_on_empty = true}
+        _ = server.test
+      end)
+      it("делается повторная попытка", function()
+        assert.stub(_G.getInfoParam).was.called(3)
+      end)
+      it("и делается sleep", function()
+        assert.stub(_G.sleep).was.called(2)
+      end)
+    end)
   end)
 
   describe("для объекта Indicator", function()
