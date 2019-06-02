@@ -320,6 +320,32 @@ describe("hacktrade", function()
       end)
     end)
 
+    describe("при нулевой цене", function()
+      before_each(function()
+        order:update(0, nil)
+        _G.sendTransaction = mock(function()
+          return ""
+        end)
+        main()
+      end)
+
+      it("в терминал уходит заявка по рынку", function()
+        assert.stub(_G.sendTransaction).was.called_with({
+            ACCOUNT = "A1",
+            CLIENT_CODE = "C1",
+            CLASSCODE = "M1",
+            SECCODE = "T1",
+            TYPE = "M",
+            TRANS_ID = tostring(order.trans_id),
+            ACTION = "NEW_ORDER",
+            OPERATION = "B",
+            PRICE = tostring(0.0),
+            QUANTITY = tostring(2)
+        })
+      end)
+    end)
+
+
     describe("и отсутствии гонок", function()
       before_each(function()
         _G.sendTransaction = mock(function()
@@ -674,6 +700,31 @@ describe("hacktrade", function()
       end)
       it("возвращается nil", function()
         assert.is_nil(server.someValue)
+      end)
+    end)
+    describe("при retry_on_empty = true", function()
+      before_each(function()
+        local c = {called = 0}
+        _G.getInfoParam = mock(function()
+          c.called = c.called + 1
+          if c.called == 1 then
+            return nil
+          elseif c.called == 2 then
+            return ''
+          elseif c.called == 3 then
+            return 1
+          end
+        end)
+        _G.sleep = mock(function()
+        end)
+        server = ServerInfo{retry_on_empty = true}
+        _ = server.test
+      end)
+      it("делается повторная попытка", function()
+        assert.stub(_G.getInfoParam).was.called(3)
+      end)
+      it("и делается sleep", function()
+        assert.stub(_G.sleep).was.called(2)
       end)
     end)
   end)

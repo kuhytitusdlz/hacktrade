@@ -113,14 +113,27 @@ function round(num, idp)
 end
 
 -- SERVER INFO
-ServerInfo = {}
+ServerInfo = {retry_on_empty = false, retry_delay_msec = 1000}
 function ServerInfo:__index(key)
   if ServerInfo[key] ~= nil then
     return ServerInfo[key]
   end
-  local res = getInfoParam(string.upper(key))
-  if res == '' then
-    return nil
+  local res
+  while true do
+    res = getInfoParam(string.upper(key))
+    if res == '' then
+      res = nil
+    end
+    if res ~= nil then
+      return res
+    else
+      if self.retry_on_empty == true then
+        log:trace('ServerInfo retrying on ' .. key)
+        sleep(self.retry_delay_msec)
+      else
+        break
+      end
+    end
   end
   return res
 end
@@ -436,7 +449,7 @@ function SmartOrder:process()
           CLIENT_CODE = self.client,
           CLASSCODE = self.market,
           SECCODE = self.ticker,
-          TYPE = "L",
+          TYPE = (self.price == 0 and "M") or "L",
           TRANS_ID = tostring(self.trans_id),
           ACTION = "NEW_ORDER",
           OPERATION = (diff > 0 and "B") or "S",
