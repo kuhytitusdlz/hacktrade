@@ -540,11 +540,11 @@ function main()
   if Stop ~= nil then
     Stop()
   end
-<<<<<<< HEAD
+
   log:debug("main() stopped")
-=======
+
   log:close()
->>>>>>> ffeast/develop
+
 end
 
 -- TRANSACTION CALLBACK
@@ -591,7 +591,7 @@ function OnOrder(order)
   end
 end
 
-<<<<<<< HEAD
+
 WITH_GUI = false  -- вкл/выкл GUI
 G_script_path = nil -- переменная для пути запускаемого скрипта
 -- INIT CALLBACK
@@ -613,7 +613,7 @@ function OnInit(path)
     end
     SmartOrder.table = table_id
   end
-=======
+end
 -- INIT CALLBACK
 function OnInit(path)
   -- Only there it's possible to take path
@@ -622,7 +622,7 @@ end
 
 function IsWorking()
   return WORKING_FLAG
->>>>>>> ffeast/develop
+
 end
 
 -- END CALLBACK
@@ -630,13 +630,11 @@ function OnStop(stop_flag)
   -- остановка скрипта из диалога управления или закрытие терминала QUIK
   log:trace("OnStop()")
   WORKING_FLAG = false
-<<<<<<< HEAD
+
   if WITH_GUI == true then
     DestroyTable(SmartOrder.table)
   end
   if log.logfile then
     io.close(log.logfile)
   end
-=======
->>>>>>> ffeast/develop
 end
